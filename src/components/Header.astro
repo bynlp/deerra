@@ -1,0 +1,1260 @@
+<!-- ---
+import { getMenu } from 'emdash';
+
+const menu = await getMenu('primary');
+const currentPath = Astro.url.pathname;
+---
+
+<header
+  id="site-header"
+  class="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
+  data-scrolled="false"
+>
+  <div class="container-site">
+    <nav class="flex items-center justify-between h-16 md:h-20">
+
+      {/* Logo */}
+      <a
+        href="/"
+        class="flex items-center gap-2.5 group"
+        aria-label="Mindful AI — Home"
+      >
+        {/* Soft dot mark */}
+        <span
+          class="w-7 h-7 rounded-full flex items-center justify-center"
+          style="background: var(--c-accent-light); transition: var(--transition);"
+          aria-hidden="true"
+        >
+          <span
+            class="w-3 h-3 rounded-full"
+            style="background: var(--c-accent-dark);"
+          ></span>
+        </span>
+        <span
+          class="font-serif text-lg tracking-tight"
+          style="color: var(--c-text); letter-spacing: -0.02em;"
+        >
+          Mindful AI
+        </span>
+      </a>
+
+      {/* Desktop navigation */}
+      <ul class="hidden md:flex items-center gap-8" role="list">
+        {menu?.items.map((item) => {
+          const isActive = currentPath.startsWith(item.url) && item.url !== '/';
+          return (
+            <li>
+              <a
+                href={item.url}
+                class:list={[
+                  'text-small font-sans transition-colors duration-200 relative',
+                  isActive
+                    ? 'text-[var(--c-text)]'
+                    : 'text-[var(--c-text-muted)] hover:text-[var(--c-text)]',
+                ]}
+              >
+                {item.label}
+                {isActive && (
+                  <span
+                    class="absolute -bottom-1 left-0 right-0 h-px"
+                    style="background: var(--c-accent);"
+                    aria-hidden="true"
+                  ></span>
+                )}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Right side — "About" only, no login/CTA */}
+      <div class="hidden md:flex items-center">
+        <a
+          href="/thoughts"
+          class="text-small font-sans transition-colors duration-200"
+          style="color: var(--c-text-faint);"
+        >
+          Thoughts
+        </a>
+      </div>
+
+      {/* Mobile menu toggle */}
+      <button
+        id="mobile-menu-toggle"
+        class="md:hidden flex flex-col gap-1.5 p-2 -mr-2"
+        aria-label="Toggle navigation"
+        aria-expanded="false"
+      >
+        <span class="w-5 h-px bg-[var(--c-text)] block transition-all duration-300" id="bar1"></span>
+        <span class="w-5 h-px bg-[var(--c-text)] block transition-all duration-300" id="bar2"></span>
+        <span class="w-4 h-px bg-[var(--c-text)] block transition-all duration-300 ml-auto" id="bar3"></span>
+      </button>
+    </nav>
+  </div>
+
+  {/* Mobile menu */}
+  <div
+    id="mobile-menu"
+    class="md:hidden hidden px-6 pb-6"
+    style="background: var(--c-bg);"
+    aria-hidden="true"
+  >
+    <ul class="flex flex-col gap-1" role="list">
+      {menu?.items.map((item) => (
+        <li>
+          <a
+            href={item.url}
+            class="flex items-center py-3 text-base border-b"
+            style="border-color: var(--c-border); color: var(--c-text-muted);"
+          >
+            {item.label}
+          </a>
+        </li>
+      ))}
+      <li>
+        <a
+          href="/thoughts"
+          class="flex items-center py-3 text-base"
+          style="color: var(--c-text-faint);"
+        >
+          Thoughts
+        </a>
+      </li>
+    </ul>
+  </div>
+</header>
+
+{/* Spacer so content doesn't hide under fixed header */}
+<div class="h-16 md:h-20" aria-hidden="true"></div>
+
+<script>
+  // Scroll effect — add background blur when scrolled
+  const header = document.getElementById('site-header')!;
+  const onScroll = () => {
+    const scrolled = window.scrollY > 30;
+    header.setAttribute('data-scrolled', String(scrolled));
+    if (scrolled) {
+      header.style.background = 'rgba(247, 245, 242, 0.88)';
+      header.style.backdropFilter = 'blur(12px)';
+      header.style.WebkitBackdropFilter = 'blur(12px)';
+      header.style.borderBottom = '1px solid rgba(227, 222, 215, 0.7)';
+    } else {
+      header.style.background = 'transparent';
+      header.style.backdropFilter = 'none';
+      header.style.WebkitBackdropFilter = 'none';
+      header.style.borderBottom = '1px solid transparent';
+    }
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Mobile menu toggle
+  const toggle = document.getElementById('mobile-menu-toggle')!;
+  const mobileMenu = document.getElementById('mobile-menu')!;
+  const bar1 = document.getElementById('bar1')!;
+  const bar2 = document.getElementById('bar2')!;
+  const bar3 = document.getElementById('bar3')!;
+  let open = false;
+
+  toggle.addEventListener('click', () => {
+    open = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    mobileMenu.setAttribute('aria-hidden', String(!open));
+
+    if (open) {
+      mobileMenu.classList.remove('hidden');
+      bar1.style.transform = 'translateY(6px) rotate(45deg)';
+      bar2.style.opacity = '0';
+      bar3.style.transform = 'translateY(-6px) rotate(-45deg)';
+      bar3.style.width = '20px';
+      bar3.style.marginLeft = '0';
+    } else {
+      mobileMenu.classList.add('hidden');
+      bar1.style.transform = '';
+      bar2.style.opacity = '';
+      bar3.style.transform = '';
+      bar3.style.width = '';
+      bar3.style.marginLeft = '';
+    }
+  });
+</script> -->
+
+
+
+<!-- ---
+import { getMenu } from 'emdash';
+
+const menu = await getMenu('primary');
+
+const currentPath = Astro.url.pathname;
+
+const navLinks = menu?.items ?? [
+  { label: 'Moments',   url: '/moments' },
+  { label: 'Stories',   url: '/stories' },
+  { label: 'Living',    url: '/living' },
+  { label: 'Companion', url: '/companion' },
+];
+---
+
+<header id="site-header">
+  <div class="header-inner">
+
+    {/* ── Logo ── */}
+    <a href="/" class="logo-link" aria-label="Mindful AI — Home">
+      <span class="logo-dot" aria-hidden="true">
+        <span class="logo-dot-inner"></span>
+      </span>
+      <span class="logo-text">Mindful AI</span>
+    </a>
+
+    {/* ── Desktop Nav (center) ── */}
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <ul role="list">
+        {navLinks.map((item) => {
+          const isActive = currentPath.startsWith(item.url) && item.url !== '/';
+          return (
+            <li>
+              <a href={item.url} class={isActive ? 'nav-link active' : 'nav-link'}>
+                {item.label}
+              </a>
+            </li>
+          );
+        })}
+        <li>
+          <a href="/thoughts" class="nav-link muted">Thoughts</a>
+        </li>
+      </ul>
+    </nav>
+
+    {/* ── Right controls ── */}
+    <div class="header-controls">
+
+      {/* Dark / light toggle */}
+      <button id="theme-toggle" class="theme-btn" aria-label="Toggle dark mode">
+        <svg class="icon-sun" width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+
+      {/* Hamburger (mobile only) */}
+      <button
+        id="hamburger"
+        class="hamburger-btn"
+        aria-label="Open navigation menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <span class="bar bar-top"></span>
+        <span class="bar bar-mid"></span>
+        <span class="bar bar-bot"></span>
+      </button>
+    </div>
+  </div>
+
+  {/* ── Mobile drawer ── */}
+  <div id="mobile-menu" class="mobile-drawer" aria-hidden="true">
+    <ul role="list">
+      {navLinks.map((item) => (
+        <li>
+          <a href={item.url} class="mobile-link">{item.label}</a>
+        </li>
+      ))}
+      <li>
+        <a href="/thoughts" class="mobile-link" style="opacity: 0.6;">Thoughts</a>
+      </li>
+    </ul>
+  </div>
+</header>
+
+{/* Spacer = header height */}
+<div style="height: var(--header-h);" aria-hidden="true"></div>
+
+<style>
+  /* ── Token ── */
+  :root { --header-h: 64px; }
+  @media (min-width: 768px) { :root { --header-h: 72px; } }
+
+  /* ── Shell ── */
+  #site-header {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 100;
+    border-bottom: 1px solid transparent;
+    transition: background 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease;
+  }
+  #site-header.scrolled {
+    background: rgba(247, 245, 242, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom-color: rgba(227, 222, 215, 0.7);
+  }
+  :root.dark #site-header.scrolled {
+    background: rgba(26, 24, 21, 0.92);
+    border-bottom-color: rgba(60, 56, 50, 0.7);
+  }
+
+  /* ── Inner row: logo | nav | controls ── */
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: var(--header-h);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-inline: clamp(1.25rem, 5vw, 3rem);
+  }
+
+  /* ── Logo ── */
+  .logo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .logo-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--c-accent-light);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.25s ease;
+  }
+  .logo-link:hover .logo-dot { transform: scale(1.1); }
+  .logo-dot-inner {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--c-accent-dark);
+  }
+  .logo-text {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--c-text);
+  }
+
+  /* ── Desktop nav ── */
+  .desktop-nav { display: none; }
+  @media (min-width: 768px) {
+    .desktop-nav {
+      display: flex;
+      flex: 1;
+      justify-content: center;
+    }
+  }
+  .desktop-nav ul {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    list-style: none;
+    margin: 0; padding: 0;
+  }
+  .nav-link {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--c-text-muted);
+    text-decoration: none;
+    position: relative;
+    padding-bottom: 2px;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+  .nav-link:hover { color: var(--c-text); }
+  .nav-link.active { color: var(--c-text); }
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -3px;
+    height: 1px;
+    background: var(--c-accent);
+  }
+  .nav-link.muted { color: var(--c-text-faint); }
+  .nav-link.muted:hover { color: var(--c-text-muted); }
+
+  /* ── Controls row ── */
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  /* ── Theme button ── */
+  .theme-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--c-border);
+    background: transparent;
+    color: var(--c-text-muted);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .theme-btn:hover {
+    background: var(--c-bg-deep);
+    color: var(--c-text);
+  }
+  /* Light mode → show moon; dark mode → show sun */
+  .icon-sun  { display: none; }
+  .icon-moon { display: block; }
+  :root.dark .icon-sun  { display: block; }
+  :root.dark .icon-moon { display: none; }
+
+  /* ── Hamburger ── */
+  .hamburger-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 36px; height: 36px;
+    padding: 6px;
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .hamburger-btn:hover { background: var(--c-bg-deep); }
+  @media (min-width: 768px) { .hamburger-btn { display: none; } }
+
+  .bar {
+    display: block;
+    height: 1.5px;
+    border-radius: 2px;
+    background: var(--c-text);
+    transform-origin: center;
+    transition: transform 0.28s ease, opacity 0.28s ease, width 0.28s ease;
+  }
+  .bar-top { width: 18px; }
+  .bar-mid { width: 18px; }
+  .bar-bot { width: 12px; margin-left: auto; }
+
+  /* Open state */
+  .hamburger-btn[aria-expanded="true"] .bar-top {
+    transform: translateY(6.5px) rotate(45deg);
+  }
+  .hamburger-btn[aria-expanded="true"] .bar-mid {
+    opacity: 0; transform: scaleX(0);
+  }
+  .hamburger-btn[aria-expanded="true"] .bar-bot {
+    width: 18px;
+    margin-left: 0;
+    transform: translateY(-6.5px) rotate(-45deg);
+  }
+
+  /* ── Mobile drawer ── */
+  .mobile-drawer {
+    display: none;
+    background: var(--c-bg);
+    border-top: 1px solid var(--c-border);
+    padding-bottom: 1rem;
+  }
+  .mobile-drawer.open { display: block; }
+  @media (min-width: 768px) { .mobile-drawer { display: none !important; } }
+
+  .mobile-drawer ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 clamp(1.25rem, 5vw, 3rem);
+  }
+  .mobile-link {
+    display: block;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--c-border);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    color: var(--c-text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .mobile-link:hover { color: var(--c-text); }
+  .mobile-drawer li:last-child .mobile-link { border-bottom: none; }
+</style>
+
+<script>
+  // ── Prevent flash: apply stored/system theme immediately ──
+  (function () {
+    try {
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (stored === 'dark' || (!stored && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (_) {}
+  })();
+
+  // ── Scroll: toggle .scrolled ──
+  const header = document.getElementById('site-header')!;
+  function updateScroll() {
+    header.classList.toggle('scrolled', window.scrollY > 20);
+  }
+  window.addEventListener('scroll', updateScroll, { passive: true });
+  updateScroll();
+
+  // ── Theme toggle ──
+  document.getElementById('theme-toggle')!.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch (_) {}
+  });
+
+  // ── Hamburger ──
+  const hamburger = document.getElementById('hamburger')!;
+  const drawer    = document.getElementById('mobile-menu')!;
+
+  hamburger.addEventListener('click', () => {
+    const isOpen = hamburger.getAttribute('aria-expanded') === 'true';
+    const next = !isOpen;
+    hamburger.setAttribute('aria-expanded', String(next));
+    drawer.setAttribute('aria-hidden', String(!next));
+    drawer.classList.toggle('open', next);
+    hamburger.setAttribute('aria-label', next ? 'Close navigation menu' : 'Open navigation menu');
+  });
+
+  drawer.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      hamburger.setAttribute('aria-expanded', 'false');
+      drawer.setAttribute('aria-hidden', 'true');
+      drawer.classList.remove('open');
+    });
+  });
+</script> -->
+
+
+
+---
+/**
+ * Header.astro
+ *
+ * Nav data comes exclusively from EmDash CMS (getMenu).
+ * Supports unlimited nesting: top-level items with children get
+ * a hover dropdown on desktop and an accordion on mobile.
+ *
+ * No hardcoded fallback arrays — plain objects without .children
+ * cause a Vite "Cannot read properties of undefined ('call')" error
+ * because they don't satisfy the EmDash MenuItem interface.
+ */
+import { getMenu } from 'emdash';
+
+const menu = await getMenu('primary');
+// menu?.items is MenuItem[] | undefined — always an array or empty
+const items = menu?.items ?? [];
+const currentPath = Astro.url.pathname;
+
+function isActive(url: string) {
+  return url !== '/' && currentPath.startsWith(url);
+}
+---
+
+<header id="site-header">
+  <div class="header-inner">
+
+    {/* ── Logo ─────────────────────────────────────────── */}
+    <a href="/" class="logo-link" aria-label="Mindful AI — Home">
+      <span class="logo-dot" aria-hidden="true">
+        <span class="logo-dot-inner"></span>
+      </span>
+      <span class="logo-text">Mindful AI</span>
+    </a>
+
+    {/* ── Desktop Nav ──────────────────────────────────── */}
+    <nav class="desktop-nav" aria-label="Primary">
+      <ul class="nav-list" role="list">
+
+        {items.map((item) => {
+          const hasChildren = item.children && item.children.length > 0;
+          return (
+            <li class={hasChildren ? 'nav-item has-dropdown' : 'nav-item'}>
+
+              {/* Top-level link / button */}
+              {hasChildren ? (
+                <button
+                  class={isActive(item.url) ? 'nav-link active' : 'nav-link'}
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                >
+                  {item.label}
+                  <svg class="chevron" width="10" height="10" viewBox="0 0 10 10"
+                    fill="none" aria-hidden="true">
+                    <path d="M2 3.5l3 3 3-3" stroke="currentColor"
+                      stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              ) : (
+                <a
+                  href={item.url}
+                  class={isActive(item.url) ? 'nav-link active' : 'nav-link'}
+                  target={item.target ?? undefined}
+                >
+                  {item.label}
+                </a>
+              )}
+
+              {/* Dropdown panel (rendered only if children exist) */}
+              {hasChildren && (
+                <div class="dropdown" role="menu">
+                  <ul role="list">
+                    {item.children.map((child) => {
+                      const hasGrandChildren = child.children && child.children.length > 0;
+                      return (
+                        <li class={hasGrandChildren ? 'dropdown-item has-sub' : 'dropdown-item'}>
+                          <a
+                            href={child.url}
+                            class="dropdown-link"
+                            role="menuitem"
+                            target={child.target ?? undefined}
+                          >
+                            {child.label}
+                            {hasGrandChildren && (
+                              <svg width="8" height="8" viewBox="0 0 10 10" fill="none"
+                                aria-hidden="true" class="sub-chevron">
+                                <path d="M3.5 2l3 3-3 3" stroke="currentColor"
+                                  stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                              </svg>
+                            )}
+                          </a>
+
+                          {/* Third-level flyout */}
+                          {hasGrandChildren && (
+                            <div class="sub-dropdown" role="menu">
+                              <ul role="list">
+                                {child.children.map((grand) => (
+                                  <li>
+                                    <a
+                                      href={grand.url}
+                                      class="dropdown-link"
+                                      role="menuitem"
+                                      target={grand.target ?? undefined}
+                                    >
+                                      {grand.label}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </li>
+          );
+        })}
+
+      </ul>
+    </nav>
+
+    {/* ── Right controls ───────────────────────────────── */}
+    <div class="header-controls">
+
+      {/* Theme toggle */}
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+        {/* Sun — visible in dark mode */}
+        <svg class="icon-sun" width="17" height="17" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+          aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1"    x2="12" y2="3"/>
+          <line x1="12" y1="21"   x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22"   x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1"  y1="12" x2="3"  y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        {/* Moon — visible in light mode */}
+        <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+          aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+
+      {/* Hamburger — mobile only */}
+      <button
+        id="hamburger"
+        class="hamburger-btn"
+        aria-label="Open navigation menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <span class="bar bar-top"></span>
+        <span class="bar bar-mid"></span>
+        <span class="bar bar-bot"></span>
+      </button>
+    </div>
+  </div>{/* /header-inner */}
+
+  {/* ── Mobile drawer ────────────────────────────────────────────── */}
+  <div id="mobile-menu" class="mobile-drawer" aria-hidden="true" role="dialog"
+    aria-label="Navigation menu">
+    <nav>
+      <ul class="mobile-list" role="list">
+
+        {items.map((item) => {
+          const hasChildren = item.children && item.children.length > 0;
+          return (
+            <li class="mobile-item">
+
+              {/* If no children → plain link */}
+              {!hasChildren && (
+                <a href={item.url} class="mobile-link" target={item.target ?? undefined}>
+                  {item.label}
+                </a>
+              )}
+
+              {/* If has children → accordion */}
+              {hasChildren && (
+                <>
+                  <button class="mobile-accordion-btn" aria-expanded="false">
+                    <span>{item.label}</span>
+                    <svg class="acc-chevron" width="12" height="12" viewBox="0 0 12 12"
+                      fill="none" aria-hidden="true">
+                      <path d="M2 4l4 4 4-4" stroke="currentColor"
+                        stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+
+                  <ul class="mobile-sub" aria-hidden="true" role="list">
+                    {/* Optionally add parent link as first sub-item */}
+                    <li>
+                      <a href={item.url} class="mobile-sublink mobile-sublink--parent">
+                        All {item.label}
+                      </a>
+                    </li>
+                    {item.children.map((child) => (
+                      <li>
+                        <a href={child.url} class="mobile-sublink"
+                          target={child.target ?? undefined}>
+                          {child.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+            </li>
+          );
+        })}
+
+      </ul>
+    </nav>
+  </div>
+</header>
+
+{/* Height spacer — keeps page content below the fixed bar */}
+<div style="height: var(--header-h);" aria-hidden="true"></div>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     Styles — all layout/responsive CSS lives here, NOT in Tailwind,
+     so it is never purged from the bundle.
+───────────────────────────────────────────────────────────────────────── -->
+<style>
+  /* ── Token ── */
+  :root { --header-h: 64px; }
+  @media (min-width: 768px) { :root { --header-h: 72px; } }
+
+  /* ── Shell ── */
+  #site-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 200;
+    border-bottom: 1px solid transparent;
+    transition: background 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease;
+  }
+  #site-header.scrolled {
+    background: rgba(247, 245, 242, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom-color: rgba(227, 222, 215, 0.75);
+  }
+  :root.dark #site-header.scrolled {
+    background: rgba(26, 24, 21, 0.93);
+    border-bottom-color: rgba(58, 54, 48, 0.75);
+  }
+
+  /* ── Inner: flex row — logo | nav | controls ── */
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: var(--header-h);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-inline: clamp(1.25rem, 5vw, 3rem);
+  }
+
+  /* ══ LOGO ════════════════════════════════════════════════════════ */
+  .logo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .logo-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--c-accent-light);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+  }
+  .logo-link:hover .logo-dot { transform: scale(1.1); }
+  .logo-dot-inner {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--c-accent-dark);
+  }
+  .logo-text {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--c-text);
+    white-space: nowrap;
+  }
+
+  /* ══ DESKTOP NAV ═════════════════════════════════════════════════ */
+  .desktop-nav { display: none; }
+  @media (min-width: 768px) {
+    .desktop-nav {
+      display: flex;
+      flex: 1;
+      justify-content: center;
+    }
+  }
+
+  .nav-list {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0; padding: 0;
+  }
+
+  /* ── Each top-level item ── */
+  .nav-item {
+    position: relative;
+  }
+
+  /* ── Shared link/button style ── */
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--c-text-muted);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.18s, background 0.18s;
+    white-space: nowrap;
+    position: relative;
+  }
+  .nav-link:hover {
+    color: var(--c-text);
+    background: var(--c-bg-deep);
+  }
+  .nav-link.active { color: var(--c-text); }
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0.7rem; right: 0.7rem;
+    height: 1px;
+    background: var(--c-accent);
+  }
+
+  /* Chevron rotates when dropdown open */
+  .chevron {
+    color: var(--c-text-faint);
+    transition: transform 0.22s ease;
+    flex-shrink: 0;
+  }
+  .nav-item.open > .nav-link .chevron {
+    transform: rotate(180deg);
+  }
+
+  /* ══ DROPDOWN PANEL ══════════════════════════════════════════════ */
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 200px;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(47, 47, 47, 0.10);
+    padding: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-50%) translateY(-6px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    z-index: 300;
+  }
+  /* Open state — triggered by JS */
+  .nav-item.open > .dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  /* Also open on hover for users who prefer it */
+  @media (hover: hover) {
+    .has-dropdown:hover > .dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+    .has-dropdown:hover > .nav-link .chevron {
+      transform: rotate(180deg);
+    }
+  }
+
+  .dropdown ul {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.125rem;
+  }
+
+  /* ── Dropdown item ── */
+  .dropdown-item {
+    position: relative;
+  }
+  .dropdown-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--c-text-muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .dropdown-link:hover {
+    background: var(--c-bg-alt);
+    color: var(--c-text);
+  }
+  .sub-chevron { color: var(--c-text-faint); flex-shrink: 0; }
+
+  /* ── Third-level flyout ── */
+  .sub-dropdown {
+    position: absolute;
+    top: -0.5rem;
+    left: calc(100% + 6px);
+    min-width: 180px;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(47, 47, 47, 0.10);
+    padding: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-4px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    z-index: 400;
+  }
+  .sub-dropdown ul {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.125rem;
+  }
+  @media (hover: hover) {
+    .has-sub:hover > .sub-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+    }
+  }
+
+  /* ══ RIGHT CONTROLS ══════════════════════════════════════════════ */
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  /* Shared icon button base */
+  .icon-btn,
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--c-border);
+    background: transparent;
+    color: var(--c-text-muted);
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, border-color 0.18s;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover,
+  .hamburger-btn:hover {
+    background: var(--c-bg-deep);
+    color: var(--c-text);
+  }
+
+  /* Theme icon visibility */
+  .icon-sun  { display: none; }
+  .icon-moon { display: block; }
+  :root.dark .icon-sun  { display: block; }
+  :root.dark .icon-moon { display: none; }
+
+  /* Hamburger shape */
+  .hamburger-btn {
+    border-radius: 8px;
+    flex-direction: column;
+    gap: 5px;
+    padding: 7px;
+  }
+  /* Hide on desktop */
+  @media (min-width: 768px) { .hamburger-btn { display: none; } }
+
+  .bar {
+    display: block;
+    height: 1.5px;
+    border-radius: 2px;
+    background: currentColor;
+    transform-origin: center;
+    transition: transform 0.27s ease, opacity 0.27s ease, width 0.27s ease;
+  }
+  .bar-top { width: 18px; }
+  .bar-mid { width: 18px; }
+  .bar-bot { width: 12px; margin-left: auto; }
+
+  /* Open / X state */
+  #hamburger[aria-expanded="true"] .bar-top {
+    transform: translateY(6.5px) rotate(45deg);
+  }
+  #hamburger[aria-expanded="true"] .bar-mid {
+    opacity: 0; transform: scaleX(0);
+  }
+  #hamburger[aria-expanded="true"] .bar-bot {
+    width: 18px; margin-left: 0;
+    transform: translateY(-6.5px) rotate(-45deg);
+  }
+
+  /* ══ MOBILE DRAWER ═══════════════════════════════════════════════ */
+  .mobile-drawer {
+    display: none;
+    background: var(--c-bg);
+    border-top: 1px solid var(--c-border);
+    max-height: calc(100vh - var(--header-h));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .mobile-drawer.open { display: block; }
+  @media (min-width: 768px) {
+    .mobile-drawer { display: none !important; }
+  }
+
+  .mobile-list {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem clamp(1.25rem, 5vw, 3rem) 1.5rem;
+  }
+  .mobile-item { border-bottom: 1px solid var(--c-border); }
+  .mobile-item:last-child { border-bottom: none; }
+
+  /* Plain link */
+  .mobile-link {
+    display: flex;
+    align-items: center;
+    padding: 0.9rem 0;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    color: var(--c-text-muted);
+    text-decoration: none;
+    transition: color 0.18s;
+  }
+  .mobile-link:hover { color: var(--c-text); }
+
+  /* Accordion toggle button */
+  .mobile-accordion-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.9rem 0;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    color: var(--c-text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.18s;
+  }
+  .mobile-accordion-btn:hover { color: var(--c-text); }
+
+  .acc-chevron {
+    transition: transform 0.25s ease;
+    color: var(--c-text-faint);
+    flex-shrink: 0;
+  }
+  .mobile-accordion-btn[aria-expanded="true"] .acc-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* Sub-list (collapsed by default) */
+  .mobile-sub {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0.5rem 0;
+    display: none;
+  }
+  .mobile-sub.open { display: block; }
+
+  .mobile-sublink {
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 0 0.625rem 1rem;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    color: var(--c-text-faint);
+    text-decoration: none;
+    border-left: 2px solid var(--c-border);
+    transition: color 0.18s, border-color 0.18s;
+  }
+  .mobile-sublink:hover {
+    color: var(--c-text);
+    border-left-color: var(--c-accent);
+  }
+  .mobile-sublink--parent {
+    font-style: italic;
+    color: var(--c-text-muted);
+  }
+</style>
+
+<script>
+  /* ── 1. Apply stored theme before first paint (flash prevention) ── */
+  (function () {
+    try {
+      const t = localStorage.getItem('theme');
+      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (t === 'dark' || (!t && sys)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (_) {}
+  })();
+
+  /* ── 2. Scroll: add .scrolled class ── */
+  const header = document.getElementById('site-header')!;
+  function updateScroll() {
+    header.classList.toggle('scrolled', window.scrollY > 20);
+  }
+  window.addEventListener('scroll', updateScroll, { passive: true });
+  updateScroll();
+
+  /* ── 3. Theme toggle ── */
+  document.getElementById('theme-toggle')!.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (_) {}
+  });
+
+  /* ── 4. Desktop dropdown: click-to-open (for keyboard / touch) ── */
+  document.querySelectorAll<HTMLElement>('.has-dropdown').forEach((item) => {
+    const btn = item.querySelector<HTMLButtonElement>('.nav-link');
+    if (!btn) return;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = item.classList.contains('open');
+      // Close all others
+      document.querySelectorAll('.nav-item.open').forEach(el => el.classList.remove('open'));
+      if (!isOpen) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Close on Escape
+    item.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') {
+        item.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.focus();
+      }
+    });
+  });
+
+  // Click outside to close all dropdowns
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item.open').forEach((item) => {
+      item.classList.remove('open');
+      item.querySelector<HTMLButtonElement>('.nav-link')?.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  /* ── 5. Hamburger ── */
+  const hamburger = document.getElementById('hamburger')!;
+  const drawer    = document.getElementById('mobile-menu')!;
+
+  hamburger.addEventListener('click', () => {
+    const open = hamburger.getAttribute('aria-expanded') === 'true';
+    const next = !open;
+    hamburger.setAttribute('aria-expanded', String(next));
+    drawer.setAttribute('aria-hidden', String(!next));
+    drawer.classList.toggle('open', next);
+    hamburger.setAttribute(
+      'aria-label',
+      next ? 'Close navigation menu' : 'Open navigation menu'
+    );
+  });
+
+  /* ── 6. Mobile accordion ── */
+  drawer.querySelectorAll<HTMLButtonElement>('.mobile-accordion-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      const sub = btn.nextElementSibling as HTMLElement | null;
+      if (!sub) return;
+
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      sub.setAttribute('aria-hidden', String(isOpen));
+      sub.classList.toggle('open', !isOpen);
+    });
+  });
+
+  /* ── 7. Close drawer when a link inside is clicked ── */
+  drawer.querySelectorAll('a').forEach((a) => {
+    a.addEventListener('click', () => {
+      hamburger.setAttribute('aria-expanded', 'false');
+      drawer.setAttribute('aria-hidden', 'true');
+      drawer.classList.remove('open');
+    });
+  });
+</script>

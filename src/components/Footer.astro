@@ -1,0 +1,320 @@
+<!-- ---
+import { getMenu } from 'emdash';
+
+const exploreMenu = await getMenu('footer_explore');
+const infoMenu = await getMenu('footer_info');
+---
+
+<footer
+  class="mt-auto border-t"
+  style="border-color: var(--c-border); background: var(--c-bg-alt);"
+>
+  <div class="container-site py-16 md:py-20">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+
+      {/* Left — logo + tagline */}
+      <div class="md:col-span-1">
+        <a href="/" class="inline-flex items-center gap-2.5 mb-4 group">
+          <span
+            class="w-7 h-7 rounded-full flex items-center justify-center"
+            style="background: var(--c-accent-light);"
+          >
+            <span class="w-3 h-3 rounded-full" style="background: var(--c-accent-dark);"></span>
+          </span>
+          <span class="font-serif text-lg tracking-tight" style="letter-spacing: -0.02em;">
+            Mindful AI
+          </span>
+        </a>
+        <p class="text-small leading-relaxed max-w-xs" style="color: var(--c-text-muted);">
+          A quiet space to think, feel, and reset — whenever you need it.
+        </p>
+
+        {/* Soft decorative line */}
+        <div class="mt-6 w-8 h-px" style="background: var(--c-accent);"></div>
+      </div>
+
+      {/* Middle — Explore links */}
+      <div>
+        <p class="text-eyebrow mb-5">Explore</p>
+        {exploreMenu?.items.length ? (
+          <ul class="flex flex-col gap-3" role="list">
+            {exploreMenu.items.map((item) => (
+              <li>
+                <a
+                  href={item.url}
+                  class="text-small transition-colors duration-200"
+                  style="color: var(--c-text-muted);"
+                  onMouseEnter="this.style.color='var(--c-text)'"
+                  onMouseLeave="this.style.color='var(--c-text-muted)'"
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul class="flex flex-col gap-3" role="list">
+            <li><a href="/moments" class="text-small" style="color: var(--c-text-muted);">Moments</a></li>
+            <li><a href="/stories" class="text-small" style="color: var(--c-text-muted);">Stories</a></li>
+            <li><a href="/living" class="text-small" style="color: var(--c-text-muted);">Living</a></li>
+          </ul>
+        )}
+      </div>
+
+      {/* Right — Info links */}
+      <div>
+        <p class="text-eyebrow mb-5">Info</p>
+        {infoMenu?.items.length ? (
+          <ul class="flex flex-col gap-3" role="list">
+            {infoMenu.items.map((item) => (
+              <li>
+                <a
+                  href={item.url}
+                  class="text-small transition-colors duration-200"
+                  style="color: var(--c-text-muted);"
+                  onMouseEnter="this.style.color='var(--c-text)'"
+                  onMouseLeave="this.style.color='var(--c-text-muted)'"
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul class="flex flex-col gap-3" role="list">
+            <li><a href="/companion" class="text-small" style="color: var(--c-text-muted);">Companion</a></li>
+            <li><a href="/thoughts" class="text-small" style="color: var(--c-text-muted);">Thoughts</a></li>
+            <li><a href="/future" class="text-small" style="color: var(--c-text-muted);">Future</a></li>
+            <li><a href="/privacy" class="text-small" style="color: var(--c-text-muted);">Privacy</a></li>
+            <li><a href="/contact" class="text-small" style="color: var(--c-text-muted);">Contact</a></li>
+          </ul>
+        )}
+      </div>
+    </div>
+
+    {/* Bottom bar */}
+    <div
+      class="mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t"
+      style="border-color: var(--c-border);"
+    >
+      <p class="text-xs" style="color: var(--c-text-faint);">
+        © {new Date().getFullYear()} Mindful AI. All rights reserved.
+      </p>
+      <p class="text-xs italic" style="color: var(--c-text-faint); font-family: var(--font-serif);">
+        Not a clinical tool. Not a replacement for professional care.
+      </p>
+    </div>
+  </div>
+</footer> -->
+
+
+---
+import { getMenu } from 'emdash';
+
+const exploreMenu = await getMenu('footer_explore');
+const infoMenu    = await getMenu('footer_info');
+
+const exploreLinks = exploreMenu?.items ?? [
+  { label: 'Moments', url: '/moments' },
+  { label: 'Stories', url: '/stories' },
+  { label: 'Living',  url: '/living'  },
+];
+
+const infoLinks = infoMenu?.items ?? [
+  { label: 'Companion', url: '/companion' },
+  { label: 'Thoughts',  url: '/thoughts'  },
+  { label: 'Future',    url: '/future'    },
+  { label: 'Privacy',   url: '/privacy'   },
+  { label: 'Contact',   url: '/contact'   },
+];
+---
+
+<footer id="site-footer">
+  <div class="footer-inner">
+
+    {/* ── Left: logo + tagline ── */}
+    <div class="footer-col footer-col--brand">
+      <a href="/" class="footer-logo" aria-label="Mindful AI — Home">
+        <span class="footer-logo-dot" aria-hidden="true">
+          <span class="footer-logo-dot-inner"></span>
+        </span>
+        <span class="footer-logo-text">Mindful AI</span>
+      </a>
+
+      <p class="footer-tagline">
+        A quiet space to think, feel, and reset — whenever you need it.
+      </p>
+
+      <div class="footer-accent-line" aria-hidden="true"></div>
+    </div>
+
+    {/* ── Middle: Explore ── */}
+    <div class="footer-col">
+      <p class="footer-heading">Explore</p>
+      <ul class="footer-links" role="list">
+        {exploreLinks.map((item) => (
+          <li>
+            <a href={item.url} class="footer-link">{item.label}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    {/* ── Right: Info ── */}
+    <div class="footer-col">
+      <p class="footer-heading">Info</p>
+      <ul class="footer-links" role="list">
+        {infoLinks.map((item) => (
+          <li>
+            <a href={item.url} class="footer-link">{item.label}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+
+  {/* ── Bottom bar ── */}
+  <div class="footer-bottom">
+    <div class="footer-bottom-inner">
+      <p class="footer-copy">
+        © {new Date().getFullYear()} Mindful AI. All rights reserved.
+      </p>
+      <p class="footer-disclaimer">
+        Not a clinical tool. Not a replacement for professional care.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  /* ── Footer shell ── */
+  #site-footer {
+    background: var(--c-bg-alt);
+    border-top: 1px solid var(--c-border);
+    margin-top: auto;
+  }
+
+  /* ── Main grid: always 3 columns on md+ ── */
+  .footer-inner {
+    display: grid;
+    grid-template-columns: 1fr;        /* mobile: single column */
+    gap: 2.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem clamp(1.25rem, 5vw, 3rem) 3rem;
+  }
+  @media (min-width: 640px) {
+    .footer-inner {
+      grid-template-columns: 1fr 1fr;  /* tablet: 2 col */
+    }
+    .footer-col--brand { grid-column: 1 / -1; } /* brand full-width on tablet */
+  }
+  @media (min-width: 900px) {
+    .footer-inner {
+      grid-template-columns: 1.6fr 1fr 1fr; /* desktop: 3 col */
+      gap: 3rem;
+    }
+    .footer-col--brand { grid-column: auto; } /* reset */
+  }
+
+  /* ── Brand column ── */
+  .footer-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    margin-bottom: 1rem;
+  }
+  .footer-logo-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--c-accent-light);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .footer-logo-dot-inner {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--c-accent-dark);
+  }
+  .footer-logo-text {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--c-text);
+  }
+  .footer-tagline {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: var(--c-text-muted);
+    max-width: 22rem;
+    margin: 0;
+  }
+  .footer-accent-line {
+    width: 2rem;
+    height: 1px;
+    background: var(--c-accent);
+    margin-top: 1.5rem;
+  }
+
+  /* ── Link columns ── */
+  .footer-heading {
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-text-faint);
+    margin: 0 0 1.1rem 0;
+  }
+  .footer-links {
+    list-style: none;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .footer-link {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--c-text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-link:hover { color: var(--c-text); }
+
+  /* ── Bottom bar ── */
+  .footer-bottom {
+    border-top: 1px solid var(--c-border);
+  }
+  .footer-bottom-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem clamp(1.25rem, 5vw, 3rem);
+  }
+  @media (min-width: 640px) {
+    .footer-bottom-inner {
+      flex-direction: row;
+      gap: 1rem;
+    }
+  }
+  .footer-copy {
+    font-size: 0.75rem;
+    color: var(--c-text-faint);
+    margin: 0;
+  }
+  .footer-disclaimer {
+    font-size: 0.75rem;
+    font-style: italic;
+    font-family: var(--font-serif);
+    color: var(--c-text-faint);
+    margin: 0;
+  }
+</style>
