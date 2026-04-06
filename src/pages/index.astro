@@ -33,7 +33,7 @@ const siteUrl = Astro.url.origin;
 ---
 
 <Base
-  title="Mindful AI — A Calm Space to Think, Feel, and Reset"
+  title="Deerra — A Calm Space to Think, Feel, and Reset"
   description="Explore how people use AI to navigate stress, late nights, and everyday emotions. A quiet space for your inner life."
   llmSummary="Mindful AI is an AI emotional wellness platform providing content on AI companionship for everyday emotional moments — including late-night anxiety, work stress, loneliness, and daily habits. The site covers AI companion devices, first-person stories, living guides, and editorial thinking on the future of emotional AI."
   llmIntent="Adults seeking AI-based emotional support, daily wellness habits, or information about the AI companion category."
@@ -128,7 +128,7 @@ const siteUrl = Astro.url.origin;
         </div>
       ) : (
         <div class="empty-state">
-          <p>Moments are being added. <a href="/_emdash/admin/content/moments/new">Create first →</a></p>
+          <p>Moments are being added. </p>
         </div>
       )}
     </div>
@@ -716,14 +716,24 @@ const siteUrl = Astro.url.origin;
   .faq-layout {
     display: grid; grid-template-columns: 1fr; gap: 3rem;
   }
-  @media (min-width: 800px) { .faq-layout { grid-template-columns: 2fr 3fr; } }
-  .faq-right { display: flex; flex-direction: column; gap: 1rem; }
+  @media (min-width: 900px) { .faq-layout {
+      grid-template-columns: 1.2fr 1.8fr;
+      align-items: start;
+    }}
+  .faq-right { display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 640px;
+  }
+  .faq-left {
+    max-width: 420px;
+  }
 
   /* ── Future section ── */
   .future-section {
     position: relative; overflow: hidden;
     padding-block: clamp(5rem, 10vw, 8rem);
-    background: var(--c-text);
+    background: var(--c-bg-deep);
   }
   .future-section__bg {
     position: absolute; inset: 0; pointer-events: none;
@@ -737,16 +747,16 @@ const siteUrl = Astro.url.origin;
     box-shadow: 0 0 20px rgba(230,199,163,0.5);
     animation: pulse 2s ease-in-out infinite;
   }
-  .future-section__eyebrow { color: rgba(230,199,163,0.75); margin-bottom: 1.25rem; }
+  .future-section__eyebrow { color: var(--c-accent); margin-bottom: 1.25rem; }
   .future-section__title {
     font-family: var(--font-serif); font-weight: 500;
     font-size: clamp(1.8rem, 4vw, 3rem);
     letter-spacing: -0.025em; line-height: 1.1;
-    color: rgba(247,245,242,0.92); margin-bottom: 1.5rem;
+    color: var(--c-text); margin-bottom: 1.5rem;
   }
   .future-section__body {
     font-size: 1.1rem; line-height: 1.75; margin-bottom: 2.5rem;
-    color: rgba(247,245,242,0.45); max-width: 32rem; margin-inline: auto;
+    color: var(--c-text-muted); max-width: 32rem; margin-inline: auto;
   }
   .future-section__cta {
     background: var(--c-accent-light); color: var(--c-text);

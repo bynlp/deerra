@@ -12,7 +12,7 @@ const triggerId = `faq-trigger-${id}`;
 
 <div
   class="faq-item rounded-card border overflow-hidden transition-all duration-200"
-  style="background: white; border-color: var(--c-border);"
+  style="background: var(--c-bg-alt); border-color: var(--c-border);"
 >
   <button
     id={triggerId}
@@ -30,7 +30,7 @@ const triggerId = `faq-trigger-${id}`;
     {/* Plus / minus icon */}
     <span
       class="faq-icon flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 transition-all duration-300"
-      style="background: var(--c-bg-deep); color: var(--c-text-muted);"
+      style="background: var(--c-bg); color: var(--c-text-muted);"
       aria-hidden="true"
     >
       <svg class="faq-plus" width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -77,7 +77,9 @@ const triggerId = `faq-trigger-${id}`;
         panel.classList.add('hidden');
         plus.classList.remove('hidden');
         minus.classList.add('hidden');
-        icon.style.background = 'var(--c-bg-deep)';
+        // icon.style.background = 'var(--c-bg-deep)';
+        icon.style.background = 'var(--c-bg)';
+        icon.style.color = 'var(--c-text-muted)';
       } else {
         trigger.setAttribute('aria-expanded', 'true');
         panel.classList.remove('hidden');
