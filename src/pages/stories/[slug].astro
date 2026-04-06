@@ -1,0 +1,519 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import StoryCard from '../../components/StoryCard.astro';
+import { getEmDashEntry, getEmDashCollection } from 'emdash';
+import { Image, PortableText, Comments, CommentForm } from 'emdash/ui';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/stories');
+
+const { entry: story, cacheHint } = await getEmDashEntry('stories', slug);
+if (!story) return Astro.redirect('/stories');
+Astro.cache.set(cacheHint);
+
+const d = story.data;
+
+// Only show if consent is verified (content policy)
+if (d.consent_verified === false) return Astro.redirect('/stories');
+
+const { entries: related, cacheHint: ch2 } = await getEmDashCollection('stories', {
+  status: 'published', limit: 3,
+});
+Astro.cache.set(ch2);
+const relatedStories = related.filter((s) => s.id !== story.id).slice(0, 3);
+
+const faqs = [
+  d.faq_question_1 && d.faq_answer_1 ? { question: d.faq_question_1, answer: d.faq_answer_1 } : null,
+  d.faq_question_2 && d.faq_answer_2 ? { question: d.faq_question_2, answer: d.faq_answer_2 } : null,
+].filter(Boolean) as { question: string; answer: string }[];
+
+const displayName = d.is_anonymous ? 'Anonymous' : (d.display_name || 'Anonymous');
+const authorLabel = d.is_anonymous ? undefined : d.display_name;
+
+const publishedDate = d.publishedAt?.toLocaleDateString('en-US', {
+  year: 'numeric', month: 'long', day: 'numeric'
+});
+
+// Trigger warning labels (comma-separated string → array)
+const warnings: string[] = d.trigger_warnings
+  ? d.trigger_warnings.split(',').map((w: string) => w.trim()).filter(Boolean)
+  : [];
+
+const imageUrl = d.cover_image?.src;
+const pageUrl  = Astro.url.href;
+const siteUrl  = Astro.url.origin;
+---
+
+<Base
+  title={d.meta_title || d.title}
+  description={d.meta_description || d.excerpt || d.subtitle || ''}
+  ogImage={imageUrl}
+  canonicalUrl={d.canonical_url || undefined}
+  noIndex={d.no_index ?? false}
+  publishedAt={d.publishedAt?.toISOString()}
+  modifiedAt={d.updatedAt?.toISOString()}
+  authorName={authorLabel}
+  llmSummary={d.llm_summary || d.story_summary || undefined}
+  llmIntent={d.llm_intent || undefined}
+  focusKeyword={d.focus_keyword || undefined}
+  content={{ collection: 'stories', id: d.id, slug: story.id }}
+>
+  <SchemaOrg
+    slot="schema"
+    type="Article"
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title={d.meta_title || d.title}
+    description={d.meta_description || d.excerpt || ''}
+    imageUrl={imageUrl}
+    publishedAt={d.publishedAt?.toISOString()}
+    modifiedAt={d.updatedAt?.toISOString()}
+    authorName={authorLabel || 'Mindful AI'}
+    llmSummary={d.llm_summary || d.story_summary || undefined}
+    faqs={faqs}
+    breadcrumbs={[
+      { label: 'Stories', url: '/stories' },
+      { label: d.title, url: `/stories/${story.id}` },
+    ]}
+  />
+
+  {/* ── Hero image ── */}
+  {imageUrl ? (
+    <div class="story-hero">
+      <div {...story.edit.cover_image} class="story-hero__wrap">
+        <Image image={d.cover_image} class="story-hero__img" />
+      </div>
+      <div class="story-hero__scrim" aria-hidden="true"></div>
+    </div>
+  ) : (
+    <div class="story-hero-plain" aria-hidden="true"></div>
+  )}
+
+  <article class="story-article">
+    <div class="story-article__inner">
+
+      {/* Breadcrumb */}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a><span>/</span>
+        <a href="/stories">Stories</a><span>/</span>
+        <span style="color: var(--c-text-muted);">{d.title}</span>
+      </nav>
+
+      {/* Trigger warnings */}
+      {warnings.length > 0 && !warnings.includes('none') && (
+        <div class="trigger-warning" role="note" aria-label="Content note">
+          <strong>Content note:</strong> This story includes references to {warnings.join(', ')}.
+        </div>
+      )}
+
+      {/* Meta row */}
+      <div class="story-meta-row">
+        {d.read_time && <span class="tag">{d.read_time} read</span>}
+        {d.emotional_arc && <span class="tag">{d.emotional_arc.replace(/-/g, ' → ')}</span>}
+        {publishedDate && (
+          <time datetime={d.publishedAt?.toISOString()} class="story-date">
+            {publishedDate}
+          </time>
+        )}
+      </div>
+
+      {/* Title */}
+      <h1 class="story-title" {...story.edit.title}>{d.title}</h1>
+
+      {/* Subtitle */}
+      {d.subtitle && (
+        <p class="story-subtitle" {...story.edit.subtitle}>{d.subtitle}</p>
+      )}
+
+      {/* Pull quote */}
+      {d.pull_quote && (
+        <blockquote class="pull-quote">
+          <p>"{d.pull_quote}"</p>
+        </blockquote>
+      )}
+
+      {/* LLM Summary block */}
+      {(d.llm_summary || d.story_summary) && (
+        <aside class="llm-summary-block" aria-label="Story summary">
+          <p class="llm-summary-block__eyebrow">In brief</p>
+          <p class="llm-summary-block__text">{d.llm_summary || d.story_summary}</p>
+        </aside>
+      )}
+
+      {/* Storyteller info */}
+      <div class="storyteller">
+        <div class="storyteller__avatar" aria-hidden="true">
+          {d.storyteller_photo?.src ? (
+            <Image image={d.storyteller_photo} class="storyteller__photo" />
+          ) : (
+            <div class="storyteller__initials">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <div class="storyteller__info">
+          <p class="storyteller__name">{displayName}</p>
+          <p class="storyteller__context">
+            {[d.age_range, d.location, d.life_context].filter(Boolean).join(' · ')}
+          </p>
+          {d.ai_tool_used && (
+            <p class="storyteller__tool">AI used: {d.ai_tool_used}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Excerpt as opening */}
+      {d.excerpt && (
+        <p class="story-excerpt">{d.excerpt}</p>
+      )}
+
+      {/* Body */}
+      {d.content && (
+        <div class="prose-calm" {...story.edit.content}>
+          <PortableText value={d.content} />
+        </div>
+      )}
+
+      {/* FAQ */}
+      {faqs.length > 0 && (
+        <section class="faq-section" aria-label="Common questions">
+          <h2 class="faq-section__heading">Common questions</h2>
+          <div class="faq-section__list">
+            {faqs.map((faq, i) => (
+              <div class="faq-item" id={`faq-${i}`}>
+                <h3 class="faq-item__question">{faq.question}</h3>
+                <p class="faq-item__answer">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Safety note */}
+      {d.safety_note && (
+        <div class="safety-note" role="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p>{d.safety_note}</p>
+        </div>
+      )}
+
+    </div>{/* /inner */}
+
+    {/* ── Comments ── */}
+    <div class="comments-section">
+      <div class="comments-section__inner">
+        <div class="comments-header reveal">
+          <h2 class="comments-header__title">Reflections</h2>
+          <p class="comments-header__desc">Share a thought. This is a quiet space — be kind.</p>
+          <div class="divider"></div>
+        </div>
+        <div class="comments-list reveal">
+          <Comments collection="stories" contentId={d.id} threaded />
+        </div>
+        <div class="comment-form-wrap reveal">
+          <div class="comment-form-header">
+            <h3>Leave a reflection</h3>
+            <p>Your words might help someone else feel less alone.</p>
+          </div>
+          <CommentForm collection="stories" contentId={d.id} />
+        </div>
+      </div>
+    </div>
+  </article>
+
+  {/* Related stories */}
+  {relatedStories.length > 0 && (
+    <section class="related-section">
+      <div class="container-site">
+        <div class="related-section__header reveal">
+          <h2>More stories</h2>
+          <a href="/stories" class="btn btn-ghost">All stories</a>
+        </div>
+        <div class="related-section__grid stagger-children">
+          {relatedStories.map((s) => (
+            <StoryCard
+              slug={s.id}
+              title={s.data.title}
+              excerpt={s.data.excerpt}
+              readTime={s.data.read_time}
+              imageSrc={s.data.cover_image?.src}
+              imageAlt={s.data.cover_image?.alt}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .story-hero { position: relative; height: clamp(300px, 50vh, 520px); overflow: hidden; }
+  .story-hero__wrap { position: absolute; inset: 0; }
+  .story-hero__img { width: 100%; height: 100%; object-fit: cover; }
+  .story-hero__scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, var(--c-bg) 100%);
+  }
+  .story-hero-plain { height: 3rem; background: var(--c-bg-alt); }
+
+  .story-article { padding-bottom: 0; }
+  .story-article__inner {
+    max-width: 720px; margin: 0 auto;
+    padding: 2rem clamp(1.25rem, 5vw, 2.5rem) 4rem;
+  }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.75rem; color: var(--c-text-faint);
+    margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--c-text-faint); text-decoration: none; transition: color 0.2s; }
+  .breadcrumb a:hover { color: var(--c-text); }
+
+  .trigger-warning {
+    background: rgba(234, 218, 218, 0.4);
+    border-left: 3px solid var(--c-blush);
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: var(--c-text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .story-meta-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap; margin-bottom: 1rem;
+  }
+  .story-date { font-size: 0.75rem; color: var(--c-text-faint); }
+
+  .story-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--c-text);
+    margin-bottom: 0.75rem;
+  }
+  .story-subtitle {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.2rem;
+    color: var(--c-text-muted);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Pull quote */
+  .pull-quote {
+    border-left: 3px solid var(--c-accent);
+    border-radius: 0 1rem 1rem 0;
+    background: var(--c-bg-alt);
+    margin: 1.5rem 0;
+    padding: 1.25rem 1.75rem;
+  }
+  .pull-quote p {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+    line-height: 1.65;
+    color: var(--c-text);
+    margin: 0;
+  }
+
+  /* LLM Summary */
+  .llm-summary-block {
+    background: var(--c-bg-alt);
+    border-left: 3px solid var(--c-accent);
+    border-radius: 0 0.75rem 0.75rem 0;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .llm-summary-block__eyebrow {
+    font-size: 0.7rem; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--c-text-faint); margin-bottom: 0.5rem;
+  }
+  .llm-summary-block__text {
+    font-size: 0.9375rem; line-height: 1.7;
+    color: var(--c-text-soft); margin: 0;
+  }
+
+  /* Storyteller card */
+  .storyteller {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--c-border);
+    border-bottom: 1px solid var(--c-border);
+    margin-bottom: 2rem;
+  }
+  .storyteller__avatar { flex-shrink: 0; }
+  .storyteller__photo {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .storyteller__initials {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--c-accent-light);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    color: var(--c-accent-deep);
+  }
+  .storyteller__name {
+    font-weight: 500; font-size: 0.9375rem;
+    color: var(--c-text); margin: 0 0 0.2rem;
+  }
+  .storyteller__context {
+    font-size: 0.8125rem; color: var(--c-text-faint); margin: 0;
+  }
+  .storyteller__tool {
+    font-size: 0.75rem; color: var(--c-text-faint);
+    margin: 0.2rem 0 0; font-style: italic;
+  }
+
+  .story-excerpt {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--c-text-muted);
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  /* FAQ */
+  .faq-section { margin-block: 2.5rem; }
+  .faq-section__heading {
+    font-family: var(--font-serif); font-size: 1.4rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1.25rem;
+  }
+  .faq-section__list { display: flex; flex-direction: column; gap: 1rem; }
+  .faq-item {
+    padding: 1.25rem 1.5rem;
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1rem;
+  }
+  :root.dark .faq-item { background: var(--c-bg-alt); }
+  .faq-item__question {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.625rem;
+  }
+  .faq-item__answer {
+    font-size: 0.9375rem; line-height: 1.7;
+    color: var(--c-text-muted); margin: 0;
+  }
+
+  /* Safety note */
+  .safety-note {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: rgba(234,218,218,0.4);
+    border-radius: 0.75rem; border: 1px solid var(--c-blush);
+    margin-top: 2rem;
+  }
+  :root.dark .safety-note { background: rgba(120,80,80,0.15); border-color: rgba(120,80,80,0.3); }
+  .safety-note svg { flex-shrink: 0; margin-top: 1px; color: var(--c-text-muted); }
+  .safety-note p { font-size: 0.875rem; line-height: 1.65; color: var(--c-text-muted); margin: 0; }
+
+  /* Comments */
+  .comments-section {
+    background: var(--c-bg-alt);
+    border-top: 1px solid var(--c-border);
+    padding-block: 4rem;
+  }
+  .comments-section__inner {
+    max-width: 720px; margin: 0 auto;
+    padding-inline: clamp(1.25rem, 5vw, 2.5rem);
+  }
+  .comments-header { margin-bottom: 2rem; }
+  .comments-header__title {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.25rem;
+  }
+  .comments-header__desc { font-size: 0.875rem; color: var(--c-text-muted); }
+  .comments-list { margin-bottom: 2.5rem; }
+  .comment-form-wrap {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+  }
+  :root.dark .comment-form-wrap { background: var(--c-bg-deep); }
+  .comment-form-header {
+    padding: 1.5rem 1.75rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+  .comment-form-header h3 {
+    font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.25rem;
+  }
+  .comment-form-header p { font-size: 0.875rem; color: var(--c-text-muted); margin: 0; }
+
+  /* Related */
+  .related-section { padding-block: 4rem; background: var(--c-bg-alt); }
+  .related-section__header {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .related-section__header h2 {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500;
+    color: var(--c-text);
+  }
+  .related-section__grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .related-section__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .related-section__grid { grid-template-columns: repeat(3, 1fr); } }
+
+  /* Comment form global overrides */
+  :global(.emdash-comment) { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--c-border); }
+  :global(.emdash-comment:last-child) { border-bottom: none; }
+  :global(.emdash-comment-author) { font-weight: 500; font-size: 0.875rem; color: var(--c-text); }
+  :global(.emdash-comment-date) { font-size: 0.75rem; color: var(--c-text-faint); }
+  :global(.emdash-comment-body) { font-size: 0.9375rem; line-height: 1.75; color: var(--c-text-soft); margin-top: 0.4rem; }
+  :global(.emdash-comment-replies) { margin-left: 1.25rem; padding-left: 1rem; border-left: 2px solid var(--c-border); }
+  :global(.emdash-comment-form) { padding: 1.5rem 1.75rem; }
+  :global(.emdash-comment-form label) {
+    display: block; font-size: 0.75rem; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--c-text-faint); margin-bottom: 0.375rem;
+  }
+  :global(.emdash-comment-form input),
+  :global(.emdash-comment-form textarea) {
+    width: 100%; background: var(--c-bg);
+    border: 1px solid var(--c-border); border-radius: 0.625rem;
+    padding: 0.75rem 1rem; font-family: var(--font-sans);
+    font-size: 0.9375rem; color: var(--c-text); line-height: 1.6;
+    outline: none; resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  :global(.emdash-comment-form input:focus),
+  :global(.emdash-comment-form textarea:focus) {
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 3px rgba(230,199,163,0.2);
+  }
+  :global(.emdash-comment-form textarea) { min-height: 110px; }
+  :global(.emdash-comment-form .field) { margin-bottom: 1.125rem; }
+  :global(.emdash-comment-form button[type="submit"]) {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 1.6rem; border-radius: 9999px;
+    background: var(--c-accent); color: var(--c-text);
+    font-family: var(--font-sans); font-size: 0.9rem;
+    border: none; cursor: pointer;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  :global(.emdash-comment-form button[type="submit"]:hover) {
+    background: var(--c-accent-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(230,199,163,0.35);
+  }
+</style>

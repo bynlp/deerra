@@ -1,0 +1,181 @@
+---
+/**
+ * SchemaOrg.astro
+ *
+ * Renders <script type="application/ld+json"> blocks for:
+ *  - Article / BlogPosting
+ *  - FAQPage
+ *  - HowTo
+ *  - WebPage (fallback)
+ *  - BreadcrumbList (always included if breadcrumbs provided)
+ *
+ * Usage:
+ *   <SchemaOrg type="FAQPage" data={entry.data} url={Astro.url.href} siteUrl={Astro.url.origin} />
+ */
+
+interface FaqPair {
+  question: string;
+  answer: string;
+}
+
+interface HowToStep {
+  title: string;
+  description: string;
+}
+
+interface BreadcrumbItem {
+  label: string;
+  url: string;
+}
+
+interface Props {
+  /** Schema type to render */
+  type?: 'Article' | 'FAQPage' | 'HowTo' | 'WebPage' | 'BlogPosting';
+  /** Current page absolute URL */
+  url: string;
+  /** Site origin e.g. https://mindfulai.com */
+  siteUrl: string;
+  /** Page/article title */
+  title: string;
+  /** Short description / meta description */
+  description?: string;
+  /** Absolute URL of the hero image */
+  imageUrl?: string;
+  /** ISO 8601 publication date */
+  publishedAt?: string;
+  /** ISO 8601 modified date */
+  modifiedAt?: string;
+  /** Author display name */
+  authorName?: string;
+  /** LLM Summary — used as 'abstract' in Article schema */
+  llmSummary?: string;
+  /** FAQ pairs */
+  faqs?: FaqPair[];
+  /** HowTo steps */
+  steps?: HowToStep[];
+  /** Total time for HowTo e.g. "PT7M" */
+  howToTime?: string;
+  /** Breadcrumb trail */
+  breadcrumbs?: BreadcrumbItem[];
+}
+
+const {
+  type = 'Article',
+  url,
+  siteUrl,
+  title,
+  description = '',
+  imageUrl,
+  publishedAt,
+  modifiedAt,
+  authorName = 'Mindful AI',
+  llmSummary,
+  faqs = [],
+  steps = [],
+  howToTime,
+  breadcrumbs = [],
+} = Astro.props;
+
+/* ── Publisher / Organization block (reused in Article schemas) ── */
+const publisher = {
+  '@type': 'Organization',
+  name: 'Mindful AI',
+  url: siteUrl,
+  logo: {
+    '@type': 'ImageObject',
+    url: `${siteUrl}/favicon.svg`,
+  },
+};
+
+/* ── Schemas to emit ── */
+const schemas: object[] = [];
+
+/* 1. Main content schema */
+if (type === 'Article' || type === 'BlogPosting') {
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': type,
+    headline: title,
+    description,
+    url,
+    ...(imageUrl ? { image: imageUrl } : {}),
+    ...(publishedAt ? { datePublished: publishedAt } : {}),
+    ...(modifiedAt ? { dateModified: modifiedAt } : {}),
+    ...(llmSummary ? { abstract: llmSummary } : {}),
+    author: {
+      '@type': 'Person',
+      name: authorName,
+    },
+    publisher,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': url,
+    },
+  };
+  schemas.push(schema);
+}
+
+if (type === 'FAQPage' && faqs.length > 0) {
+  schemas.push({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: f.answer,
+      },
+    })),
+  });
+}
+
+if (type === 'HowTo' && steps.length > 0) {
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: title,
+    description,
+    ...(howToTime ? { totalTime: howToTime } : {}),
+    step: steps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.title,
+      text: s.description,
+    })),
+  };
+  schemas.push(schema);
+}
+
+if (type === 'WebPage') {
+  schemas.push({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: title,
+    description,
+    url,
+    publisher,
+  });
+}
+
+/* 2. BreadcrumbList (always, if provided) */
+if (breadcrumbs.length > 0) {
+  schemas.push({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl },
+      ...breadcrumbs.map((b, i) => ({
+        '@type': 'ListItem',
+        position: i + 2,
+        name: b.label,
+        item: `${siteUrl}${b.url}`,
+      })),
+    ],
+  });
+}
+---
+
+{schemas.map((schema) => (
+  <script type="application/ld+json" set:html={JSON.stringify(schema, null, 0)} />
+))}

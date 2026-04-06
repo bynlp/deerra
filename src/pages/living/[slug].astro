@@ -1,0 +1,601 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import { getEmDashEntry, getEmDashCollection } from 'emdash';
+import { Image, PortableText, Comments, CommentForm } from 'emdash/ui';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/living');
+
+const { entry: scene, cacheHint } = await getEmDashEntry('living', slug);
+if (!scene) return Astro.redirect('/living');
+Astro.cache.set(cacheHint);
+
+const d = scene.data;
+
+// Build steps array from CMS fields
+const steps = [
+  d.step_title_1 && d.step_desc_1 ? { title: d.step_title_1, description: d.step_desc_1 } : null,
+  d.step_title_2 && d.step_desc_2 ? { title: d.step_title_2, description: d.step_desc_2 } : null,
+  d.step_title_3 && d.step_desc_3 ? { title: d.step_title_3, description: d.step_desc_3 } : null,
+  d.step_title_4 && d.step_desc_4 ? { title: d.step_title_4, description: d.step_desc_4 } : null,
+  d.step_title_5 && d.step_desc_5 ? { title: d.step_title_5, description: d.step_desc_5 } : null,
+].filter(Boolean) as { title: string; description: string }[];
+
+const wellnessBenefits = [d.wellness_benefit_1, d.wellness_benefit_2, d.wellness_benefit_3]
+  .filter(Boolean) as string[];
+
+const faqs = [
+  d.faq_question_1 && d.faq_answer_1 ? { question: d.faq_question_1, answer: d.faq_answer_1 } : null,
+  d.faq_question_2 && d.faq_answer_2 ? { question: d.faq_question_2, answer: d.faq_answer_2 } : null,
+  d.faq_question_3 && d.faq_answer_3 ? { question: d.faq_question_3, answer: d.faq_answer_3 } : null,
+].filter(Boolean) as { question: string; answer: string }[];
+
+const llmFacts = d.llm_key_facts
+  ? d.llm_key_facts.split('\n').map((s: string) => s.trim()).filter(Boolean)
+  : [];
+
+// Time estimate for HowTo schema
+const schemaType = d.schema_type === 'HowTo' ? 'HowTo' : 'Article';
+// Convert "7 min" → "PT7M" roughly
+const howToTime = d.time_commitment
+  ? `PT${d.time_commitment.replace(/\D/g, '')}M`
+  : undefined;
+
+const { entries: related, cacheHint: ch2 } = await getEmDashCollection('stories', {
+  status: 'published', limit: 3,
+});
+Astro.cache.set(ch2);
+
+const imageUrl = d.cover_image?.src;
+const pageUrl  = Astro.url.href;
+const siteUrl  = Astro.url.origin;
+---
+
+<Base
+  title={d.meta_title || d.title}
+  description={d.meta_description || d.excerpt || d.subtitle || ''}
+  ogImage={imageUrl}
+  canonicalUrl={d.canonical_url || undefined}
+  noIndex={d.no_index ?? false}
+  publishedAt={d.publishedAt?.toISOString()}
+  modifiedAt={d.updatedAt?.toISOString()}
+  llmSummary={d.llm_summary || undefined}
+  llmIntent={d.llm_intent || undefined}
+  focusKeyword={d.focus_keyword || undefined}
+  content={{ collection: 'living', id: d.id, slug: scene.id }}
+>
+  <SchemaOrg
+    slot="schema"
+    type={schemaType as 'HowTo' | 'Article'}
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title={d.meta_title || d.title}
+    description={d.meta_description || d.excerpt || ''}
+    imageUrl={imageUrl}
+    publishedAt={d.publishedAt?.toISOString()}
+    modifiedAt={d.updatedAt?.toISOString()}
+    llmSummary={d.llm_summary || undefined}
+    steps={steps}
+    howToTime={howToTime}
+    faqs={faqs}
+    breadcrumbs={[
+      { label: 'Living', url: '/living' },
+      { label: d.title, url: `/living/${scene.id}` },
+    ]}
+  />
+
+  {/* Hero */}
+  {imageUrl ? (
+    <div class="living-hero">
+      <div {...scene.edit.cover_image} class="living-hero__wrap">
+        <Image image={d.cover_image} class="living-hero__img" />
+      </div>
+      <div class="living-hero__scrim" aria-hidden="true"></div>
+    </div>
+  ) : (
+    <div class="living-hero-plain" aria-hidden="true"></div>
+  )}
+
+  <article class="living-article">
+    <div class="living-article__inner">
+
+      {/* Breadcrumb */}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a><span>/</span>
+        <a href="/living">Living</a><span>/</span>
+        <span style="color: var(--c-text-muted);">{d.title}</span>
+      </nav>
+
+      {/* Meta row */}
+      <div class="meta-row">
+        {d.living_category && <span class="tag">{d.living_category.replace(/-/g, ' ')}</span>}
+        {d.habit_difficulty && <span class="tag">{d.habit_difficulty}</span>}
+        {d.time_commitment && <span class="tag tag--accent">⏱ {d.time_commitment}</span>}
+      </div>
+
+      {/* Title */}
+      <h1 class="living-title" {...scene.edit.title}>{d.title}</h1>
+
+      {/* Subtitle */}
+      {d.subtitle && (
+        <p class="living-subtitle" {...scene.edit.subtitle}>{d.subtitle}</p>
+      )}
+
+      {/* Emotional benefit as pull quote */}
+      {d.emotional_benefit && (
+        <blockquote class="benefit-quote">
+          <p>"{d.emotional_benefit}"</p>
+        </blockquote>
+      )}
+
+      {/* LLM Summary */}
+      {d.llm_summary && (
+        <aside class="llm-summary-block" aria-label="Quick summary">
+          <p class="llm-summary-block__eyebrow">In brief</p>
+          <p class="llm-summary-block__text">{d.llm_summary}</p>
+        </aside>
+      )}
+
+      {/* Habit loop — Cue / Routine / Reward */}
+      {(d.habit_cue || d.habit_routine || d.habit_reward) && (
+        <section class="habit-loop reveal" aria-label="Habit loop">
+          <h2 class="habit-loop__heading">The habit loop</h2>
+          <div class="habit-loop__grid">
+            {d.habit_cue && (
+              <div class="habit-loop__item">
+                <p class="habit-loop__label">Cue</p>
+                <p class="habit-loop__text">{d.habit_cue}</p>
+              </div>
+            )}
+            {d.habit_routine && (
+              <div class="habit-loop__item">
+                <p class="habit-loop__label">Routine</p>
+                <p class="habit-loop__text">{d.habit_routine}</p>
+              </div>
+            )}
+            {d.habit_reward && (
+              <div class="habit-loop__item">
+                <p class="habit-loop__label">Reward</p>
+                <p class="habit-loop__text">{d.habit_reward}</p>
+              </div>
+            )}
+          </div>
+          {d.required_setup && (
+            <p class="habit-loop__setup">
+              <strong>You'll need:</strong> {d.required_setup}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Main body */}
+      {d.content && (
+        <div class="prose-calm" {...scene.edit.content}>
+          <PortableText value={d.content} />
+        </div>
+      )}
+
+      {/* Step-by-step guide — generates HowTo schema */}
+      {steps.length > 0 && (
+        <section class="steps-section reveal" aria-label="Step by step guide">
+          <h2 class="steps-section__heading">Step by step</h2>
+          <ol class="steps-list">
+            {steps.map((step, i) => (
+              <li class="step-item">
+                <div class="step-item__num" aria-label={`Step ${i + 1}`}>{i + 1}</div>
+                <div class="step-item__body">
+                  <h3 class="step-item__title">{step.title}</h3>
+                  <p class="step-item__desc">{step.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* Wellness benefits */}
+      {wellnessBenefits.length > 0 && (
+        <section class="wellness-section reveal" aria-label="Wellness benefits">
+          <h2 class="wellness-section__heading">Why this works</h2>
+          <div class="wellness-grid">
+            {wellnessBenefits.map((benefit, i) => (
+              <div class="wellness-item">
+                <div class="wellness-item__icon" aria-hidden="true">
+                  {['🧠', '💤', '🌱'][i] || '✦'}
+                </div>
+                <p class="wellness-item__text">{benefit}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* AI tools */}
+      {d.ai_tools_used && (
+        <div class="tools-note reveal">
+          <p class="tools-note__label">Works with</p>
+          <p class="tools-note__text">{d.ai_tools_used}</p>
+        </div>
+      )}
+
+      {/* LLM key facts */}
+      {llmFacts.length > 0 && (
+        <section class="key-facts reveal" aria-label="Key facts">
+          <h2 class="key-facts__heading">Key facts</h2>
+          <ul class="key-facts__list">
+            {llmFacts.map((f: string) => (
+              <li class="key-facts__item">
+                <span class="key-facts__dot" aria-hidden="true"></span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* FAQ */}
+      {faqs.length > 0 && (
+        <section class="faq-section reveal" aria-label="Frequently asked questions">
+          <h2 class="faq-section__heading">Common questions</h2>
+          <div class="faq-section__list">
+            {faqs.map((faq, i) => (
+              <div class="faq-item" id={`faq-${i}`}>
+                <h3 class="faq-item__question">{faq.question}</h3>
+                <p class="faq-item__answer">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Safety note */}
+      {d.safety_note && (
+        <div class="safety-note" role="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p>{d.safety_note}</p>
+        </div>
+      )}
+
+    </div>{/* /inner */}
+
+    {/* ── Comments ── */}
+    <div class="comments-section">
+      <div class="comments-inner">
+        <div class="comments-header reveal">
+          <h2>Your experience</h2>
+          <p>Does this resonate? Share how it works for you.</p>
+          <div class="divider"></div>
+        </div>
+        <div class="comments-list reveal">
+          <Comments collection="living" contentId={d.id} threaded />
+        </div>
+        <div class="comment-form-wrap reveal">
+          <div class="comment-form-header">
+            <h3>Share your experience</h3>
+          </div>
+          <CommentForm collection="living" contentId={d.id} />
+        </div>
+      </div>
+    </div>
+  </article>
+
+  {/* Related stories */}
+  {related.length > 0 && (
+    <section class="related-section">
+      <div class="container-site">
+        <h2 class="related-heading reveal">People writing about this</h2>
+        <div class="related-grid stagger-children">
+          {related.slice(0, 3).map((s) => (
+            <a href={`/stories/${s.id}`} class="related-card">
+              {s.data.cover_image?.src && (
+                <div class="related-card__img-wrap">
+                  <Image image={s.data.cover_image} class="related-card__img" />
+                </div>
+              )}
+              <div class="related-card__body">
+                {s.data.read_time && <span class="text-eyebrow">{s.data.read_time}</span>}
+                <h3 class="related-card__title">{s.data.title}</h3>
+                {s.data.excerpt && <p class="related-card__excerpt">{s.data.excerpt}</p>}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .living-hero { position: relative; height: clamp(260px, 42vh, 460px); overflow: hidden; }
+  .living-hero__wrap { position: absolute; inset: 0; }
+  .living-hero__img { width: 100%; height: 100%; object-fit: cover; }
+  .living-hero__scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, var(--c-bg) 100%);
+  }
+  .living-hero-plain { height: 3rem; background: var(--c-bg-alt); }
+
+  .living-article { padding-bottom: 0; }
+  .living-article__inner {
+    max-width: 720px; margin: 0 auto;
+    padding: 2rem clamp(1.25rem, 5vw, 2.5rem) 4rem;
+  }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.75rem; color: var(--c-text-faint);
+    margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--c-text-faint); text-decoration: none; transition: color 0.2s; }
+  .breadcrumb a:hover { color: var(--c-text); }
+
+  .meta-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap; margin-bottom: 1.25rem;
+  }
+  .tag--accent { background: var(--c-accent-light); color: var(--c-accent-deep); border-color: var(--c-accent); }
+
+  .living-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    font-weight: 500; letter-spacing: -0.02em;
+    line-height: 1.1; color: var(--c-text); margin-bottom: 0.875rem;
+  }
+  .living-subtitle {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 1.2rem; color: var(--c-text-muted); line-height: 1.6;
+    margin-bottom: 2rem; padding-bottom: 2rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  .benefit-quote {
+    border-left: 3px solid var(--c-accent);
+    border-radius: 0 1rem 1rem 0;
+    background: var(--c-bg-alt);
+    padding: 1.25rem 1.75rem; margin-bottom: 2rem;
+  }
+  .benefit-quote p {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: clamp(1.05rem, 2vw, 1.2rem);
+    line-height: 1.65; color: var(--c-text); margin: 0;
+  }
+
+  .llm-summary-block {
+    background: var(--c-bg-alt); border-left: 3px solid var(--c-accent);
+    border-radius: 0 0.75rem 0.75rem 0;
+    padding: 1.25rem 1.5rem; margin-bottom: 2.5rem;
+  }
+  .llm-summary-block__eyebrow {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-text-faint); margin-bottom: 0.5rem;
+  }
+  .llm-summary-block__text {
+    font-size: 0.9375rem; line-height: 1.7; color: var(--c-text-soft); margin: 0;
+  }
+
+  /* Habit loop */
+  .habit-loop { margin-bottom: 2.5rem; }
+  .habit-loop__heading {
+    font-family: var(--font-serif); font-size: 1.2rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1rem;
+  }
+  .habit-loop__grid {
+    display: grid; grid-template-columns: 1fr;
+    gap: 0.75rem; margin-bottom: 1rem;
+  }
+  @media (min-width: 560px) { .habit-loop__grid { grid-template-columns: repeat(3, 1fr); } }
+  .habit-loop__item {
+    background: var(--c-bg-deep); border: 1px solid var(--c-border);
+    border-radius: 0.875rem; padding: 1.125rem;
+  }
+  .habit-loop__label {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-accent-deep); margin-bottom: 0.375rem;
+  }
+  .habit-loop__text {
+    font-size: 0.875rem; line-height: 1.6; color: var(--c-text-muted); margin: 0;
+  }
+  .habit-loop__setup {
+    font-size: 0.875rem; color: var(--c-text-faint); margin: 0;
+  }
+  .habit-loop__setup strong { color: var(--c-text-muted); font-weight: 500; }
+
+  /* Steps */
+  .steps-section { margin-block: 2.5rem; }
+  .steps-section__heading {
+    font-family: var(--font-serif); font-size: 1.3rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1.25rem;
+  }
+  .steps-list { list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 1rem; }
+  .step-item {
+    display: flex; gap: 1.25rem; align-items: flex-start;
+    padding: 1.25rem;
+    background: white; border: 1px solid var(--c-border); border-radius: 1rem;
+  }
+  :root.dark .step-item { background: var(--c-bg-alt); }
+  .step-item__num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--c-accent-light); color: var(--c-accent-deep);
+    font-family: var(--font-serif); font-size: 0.9rem; font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-item__body { flex: 1; }
+  .step-item__title {
+    font-family: var(--font-serif); font-size: 1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.375rem;
+  }
+  .step-item__desc {
+    font-size: 0.9rem; line-height: 1.65; color: var(--c-text-muted); margin: 0;
+  }
+
+  /* Wellness benefits */
+  .wellness-section { margin-block: 2.5rem; }
+  .wellness-section__heading {
+    font-family: var(--font-serif); font-size: 1.2rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1rem;
+  }
+  .wellness-grid { display: flex; flex-direction: column; gap: 0.875rem; }
+  .wellness-item {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: 1rem 1.25rem;
+    background: var(--c-bg-alt); border-radius: 0.875rem;
+    border: 1px solid var(--c-border);
+  }
+  .wellness-item__icon { font-size: 1.25rem; line-height: 1; flex-shrink: 0; }
+  .wellness-item__text {
+    font-size: 0.9rem; line-height: 1.65; color: var(--c-text-muted); margin: 0;
+  }
+
+  /* Tools note */
+  .tools-note {
+    display: flex; align-items: center; gap: 0.875rem;
+    padding: 0.875rem 1.125rem;
+    background: var(--c-bg-deep); border-radius: 0.75rem;
+    border: 1px solid var(--c-border); margin-block: 1.5rem;
+  }
+  .tools-note__label {
+    font-size: 0.72rem; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--c-text-faint);
+    flex-shrink: 0;
+  }
+  .tools-note__text { font-size: 0.875rem; color: var(--c-text-muted); margin: 0; }
+
+  /* Key facts */
+  .key-facts { margin-block: 2.5rem; padding: 1.5rem;
+    background: var(--c-bg-deep); border-radius: 1rem; border: 1px solid var(--c-border); }
+  .key-facts__heading {
+    font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1rem;
+  }
+  .key-facts__list { list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.75rem; }
+  .key-facts__item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    font-size: 0.9375rem; line-height: 1.65; color: var(--c-text-soft);
+  }
+  .key-facts__dot { width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c-accent); flex-shrink: 0; margin-top: 0.45rem; }
+
+  /* FAQ */
+  .faq-section { margin-block: 2.5rem; }
+  .faq-section__heading {
+    font-family: var(--font-serif); font-size: 1.4rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1.25rem;
+  }
+  .faq-section__list { display: flex; flex-direction: column; gap: 1rem; }
+  .faq-item { padding: 1.25rem 1.5rem; background: white;
+    border: 1px solid var(--c-border); border-radius: 1rem; }
+  :root.dark .faq-item { background: var(--c-bg-alt); }
+  .faq-item__question {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.625rem;
+  }
+  .faq-item__answer { font-size: 0.9375rem; line-height: 1.7; color: var(--c-text-muted); margin: 0; }
+
+  .safety-note {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: rgba(234,218,218,0.4); border-radius: 0.75rem;
+    border: 1px solid var(--c-blush); margin-top: 2rem;
+  }
+  :root.dark .safety-note { background: rgba(120,80,80,0.15); border-color: rgba(120,80,80,0.3); }
+  .safety-note svg { flex-shrink: 0; margin-top: 1px; color: var(--c-text-muted); }
+  .safety-note p { font-size: 0.875rem; line-height: 1.65; color: var(--c-text-muted); margin: 0; }
+
+  /* Comments */
+  .comments-section {
+    background: var(--c-bg-alt); border-top: 1px solid var(--c-border); padding-block: 4rem;
+  }
+  .comments-inner {
+    max-width: 720px; margin: 0 auto;
+    padding-inline: clamp(1.25rem, 5vw, 2.5rem);
+  }
+  .comments-header { margin-bottom: 2rem; }
+  .comments-header h2 {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.25rem;
+  }
+  .comments-header p { font-size: 0.875rem; color: var(--c-text-muted); }
+  .comments-list { margin-bottom: 2.5rem; }
+  .comment-form-wrap {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+  }
+  :root.dark .comment-form-wrap { background: var(--c-bg-deep); }
+  .comment-form-header { padding: 1.5rem 1.75rem; border-bottom: 1px solid var(--c-border); }
+  .comment-form-header h3 {
+    font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500; color: var(--c-text);
+  }
+
+  /* Related */
+  .related-section { padding-block: 4rem; background: var(--c-bg-alt); }
+  .related-heading {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 2rem;
+  }
+  .related-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 640px) { .related-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .related-grid { grid-template-columns: repeat(3, 1fr); } }
+  .related-card {
+    background: white; border: 1px solid var(--c-border); border-radius: 1.25rem;
+    overflow: hidden; text-decoration: none; display: flex; flex-direction: column;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .related-card { background: var(--c-bg-deep); }
+  .related-card:hover { box-shadow: 0 8px 32px rgba(47,47,47,0.08); transform: translateY(-2px); }
+  .related-card__img-wrap { aspect-ratio: 16/9; overflow: hidden; }
+  .related-card__img { width: 100%; height: 100%; object-fit: cover; }
+  .related-card__body { padding: 1.25rem; flex: 1; }
+  .related-card__title {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin: 0.375rem 0 0.5rem; line-height: 1.3;
+  }
+  .related-card__excerpt { font-size: 0.875rem; color: var(--c-text-muted); margin: 0; }
+
+  /* Comment form overrides */
+  :global(.emdash-comment) { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--c-border); }
+  :global(.emdash-comment:last-child) { border-bottom: none; }
+  :global(.emdash-comment-author) { font-weight: 500; font-size: 0.875rem; color: var(--c-text); }
+  :global(.emdash-comment-date) { font-size: 0.75rem; color: var(--c-text-faint); }
+  :global(.emdash-comment-body) { font-size: 0.9375rem; line-height: 1.75; color: var(--c-text-soft); margin-top: 0.4rem; }
+  :global(.emdash-comment-replies) { margin-left: 1.25rem; padding-left: 1rem; border-left: 2px solid var(--c-border); }
+  :global(.emdash-comment-form) { padding: 1.5rem 1.75rem; }
+  :global(.emdash-comment-form label) {
+    display: block; font-size: 0.75rem; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--c-text-faint); margin-bottom: 0.375rem;
+  }
+  :global(.emdash-comment-form input),
+  :global(.emdash-comment-form textarea) {
+    width: 100%; background: var(--c-bg); border: 1px solid var(--c-border);
+    border-radius: 0.625rem; padding: 0.75rem 1rem; font-family: var(--font-sans);
+    font-size: 0.9375rem; color: var(--c-text); line-height: 1.6;
+    outline: none; resize: vertical; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  :global(.emdash-comment-form input:focus),
+  :global(.emdash-comment-form textarea:focus) {
+    border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(230,199,163,0.2);
+  }
+  :global(.emdash-comment-form textarea) { min-height: 110px; }
+  :global(.emdash-comment-form .field) { margin-bottom: 1.125rem; }
+  :global(.emdash-comment-form button[type="submit"]) {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 1.6rem; border-radius: 9999px;
+    background: var(--c-accent); color: var(--c-text);
+    font-family: var(--font-sans); font-size: 0.9rem;
+    border: none; cursor: pointer;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  :global(.emdash-comment-form button[type="submit"]:hover) {
+    background: var(--c-accent-dark); transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(230,199,163,0.35);
+  }
+</style>

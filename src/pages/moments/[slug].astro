@@ -1,0 +1,564 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import StoryCard from '../../components/StoryCard.astro';
+import { getEmDashEntry, getEmDashCollection, getEntryTerms } from 'emdash';
+import { Image, PortableText } from 'emdash/ui';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/moments');
+
+const { entry: moment, cacheHint } = await getEmDashEntry('moments', slug);
+if (!moment) return Astro.redirect('/moments');
+Astro.cache.set(cacheHint);
+
+const d = moment.data;
+
+// Related stories by emotion taxonomy
+const emotionTerms = await getEntryTerms('moments', d.id, 'emotion');
+const firstEmotion = emotionTerms[0]?.slug;
+const { entries: relatedStories, cacheHint: ch2 } = await getEmDashCollection('stories', {
+  status: 'published',
+  limit: 3,
+  ...(firstEmotion ? { where: { emotion: firstEmotion } } : {}),
+});
+Astro.cache.set(ch2);
+
+// Build FAQ pairs from CMS fields
+const faqs = [
+  d.faq_question_1 && d.faq_answer_1 ? { question: d.faq_question_1, answer: d.faq_answer_1 } : null,
+  d.faq_question_2 && d.faq_answer_2 ? { question: d.faq_question_2, answer: d.faq_answer_2 } : null,
+  d.faq_question_3 && d.faq_answer_3 ? { question: d.faq_question_3, answer: d.faq_answer_3 } : null,
+].filter(Boolean) as { question: string; answer: string }[];
+
+// Build LLM key facts list
+const llmFacts: string[] = d.llm_key_facts
+  ? d.llm_key_facts.split('\n').map((s: string) => s.trim()).filter(Boolean)
+  : [];
+
+// Determine schema type
+const schemaType = (d.schema_type === 'FAQPage' ? 'FAQPage' : 'Article') as 'FAQPage' | 'Article';
+
+const imageUrl = d.cover_image?.src;
+const pageUrl  = Astro.url.href;
+const siteUrl  = Astro.url.origin;
+---
+
+<Base
+  title={d.meta_title || d.title}
+  description={d.meta_description || d.excerpt || d.subtitle || ''}
+  ogImage={imageUrl}
+  canonicalUrl={d.canonical_url || undefined}
+  noIndex={d.no_index ?? false}
+  publishedAt={d.publishedAt?.toISOString()}
+  modifiedAt={d.updatedAt?.toISOString()}
+  authorName={d.psychology_consultant || 'Mindful AI'}
+  llmSummary={d.llm_summary || undefined}
+  llmIntent={d.llm_intent || undefined}
+  focusKeyword={d.focus_keyword || undefined}
+  content={{ collection: 'moments', id: d.id, slug: moment.id }}
+>
+
+  {/* ── JSON-LD Schema (injected into <head> via slot) ── */}
+  <SchemaOrg
+    slot="schema"
+    type={schemaType}
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title={d.meta_title || d.title}
+    description={d.meta_description || d.excerpt || ''}
+    imageUrl={imageUrl}
+    publishedAt={d.publishedAt?.toISOString()}
+    modifiedAt={d.updatedAt?.toISOString()}
+    authorName={d.psychology_consultant || 'Mindful AI'}
+    llmSummary={d.llm_summary || undefined}
+    faqs={faqs}
+    breadcrumbs={[
+      { label: 'Moments', url: '/moments' },
+      { label: d.title, url: `/moments/${moment.id}` },
+    ]}
+  />
+
+  {/* ── Hero image ── */}
+  {imageUrl ? (
+    <div class="moment-hero-img">
+      <div {...moment.edit.cover_image}>
+        <Image image={d.cover_image} class="moment-hero-img__img" />
+      </div>
+      <div class="moment-hero-img__scrim" aria-hidden="true"></div>
+    </div>
+  ) : (
+    <div class="moment-hero-plain" aria-hidden="true"></div>
+  )}
+
+  {/* ── Article ── */}
+  <article class="moment-article">
+    <div class="moment-article__inner">
+
+      {/* Breadcrumb */}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span aria-hidden="true">/</span>
+        <a href="/moments">Moments</a>
+        <span aria-hidden="true">/</span>
+        <span style="color: var(--c-text-muted);">{d.title}</span>
+      </nav>
+
+      {/* Meta row */}
+      <div class="meta-row">
+        {d.icon && <span class="meta-icon" aria-hidden="true">{d.icon}</span>}
+        {d.emotion_category && <span class="tag">{d.emotion_category}</span>}
+        {d.emotion_intensity && <span class="tag">{d.emotion_intensity}</span>}
+        {d.time_of_day && <span class="tag">{d.time_of_day}</span>}
+        {emotionTerms.map((t) => <span class="tag">{t.label}</span>)}
+      </div>
+
+      {/* Title */}
+      <h1 class="moment-title" {...moment.edit.title}>{d.title}</h1>
+
+      {/* Subtitle / opening hook */}
+      {(d.subtitle || d.opening_hook) && (
+        <p class="moment-lead" {...moment.edit.subtitle}>
+          {d.subtitle || d.opening_hook}
+        </p>
+      )}
+
+      {/* LLM Summary rendered visibly as a highlighted block — dual purpose:
+          visible to readers as a "quick summary", visible to LLM crawlers as primary signal */}
+      {d.llm_summary && (
+        <aside class="llm-summary-block" aria-label="Quick summary">
+          <p class="llm-summary-block__eyebrow">Quick summary</p>
+          <p class="llm-summary-block__text">{d.llm_summary}</p>
+        </aside>
+      )}
+
+      {/* What they feel / need — emotional framing */}
+      {(d.what_they_feel || d.what_they_need) && (
+        <div class="emotion-frame">
+          {d.what_they_feel && (
+            <div class="emotion-frame__item">
+              <p class="emotion-frame__label">What this feels like</p>
+              <p class="emotion-frame__text">{d.what_they_feel}</p>
+            </div>
+          )}
+          {d.what_they_need && (
+            <div class="emotion-frame__item">
+              <p class="emotion-frame__label">What actually helps</p>
+              <p class="emotion-frame__text">{d.what_they_need}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Main body ── */}
+      {d.content && (
+        <div class="prose-calm" {...moment.edit.content}>
+          <PortableText value={d.content} />
+        </div>
+      )}
+
+      {/* AI role in moment */}
+      {d.ai_role_in_moment && (
+        <div class="ai-role-block reveal">
+          <p class="ai-role-block__label">How AI helps in this moment</p>
+          <p class="ai-role-block__text">{d.ai_role_in_moment}</p>
+        </div>
+      )}
+
+      {/* Quick actions */}
+      {d.quick_actions && (
+        <section class="actions-section reveal" aria-label="Quick actions">
+          <h2 class="actions-section__heading">What you can do right now</h2>
+          <div class="prose-calm">
+            <PortableText value={d.quick_actions} />
+          </div>
+        </section>
+      )}
+
+      {/* AI prompt suggestions — high LLM citation value */}
+      {d.ai_prompt_suggestions && (
+        <section class="prompts-section reveal" aria-label="AI prompt suggestions">
+          <h2 class="prompts-section__heading">Prompts to try</h2>
+          <p class="prompts-section__desc">Copy and paste these into any AI conversation:</p>
+          <div class="prose-calm">
+            <PortableText value={d.ai_prompt_suggestions} />
+          </div>
+        </section>
+      )}
+
+      {/* ── LLM Key Facts (rendered as hidden structured data block) ──
+           Visible to LLM crawlers via the meta tags above.
+           Also rendered visibly for users as a "Key takeaways" section. */}
+      {llmFacts.length > 0 && (
+        <section class="key-facts reveal" aria-label="Key takeaways">
+          <h2 class="key-facts__heading">Key takeaways</h2>
+          <ul class="key-facts__list">
+            {llmFacts.map((fact) => (
+              <li class="key-facts__item">
+                <span class="key-facts__dot" aria-hidden="true"></span>
+                <span>{fact}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ── FAQ Section — rendered for users AND emitted in JSON-LD ── */}
+      {faqs.length > 0 && (
+        <section class="faq-section reveal" aria-label="Frequently asked questions">
+          <h2 class="faq-section__heading">Common questions</h2>
+          <div class="faq-section__list">
+            {faqs.map((faq, i) => (
+              <div class="faq-item" id={`faq-${i}`}>
+                <h3 class="faq-item__question">{faq.question}</h3>
+                <p class="faq-item__answer">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Psychology consultant credit ── */}
+      {d.psychology_consultant && (
+        <div class="consultant-credit">
+          <span class="consultant-credit__label">Reviewed by</span>
+          <span class="consultant-credit__name">{d.psychology_consultant}</span>
+        </div>
+      )}
+
+      {/* ── Safety note ── */}
+      {d.safety_note && (
+        <div class="safety-note" role="note" aria-label="Safety information">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p>{d.safety_note}</p>
+        </div>
+      )}
+
+      {/* Sponsored disclosure */}
+      {d.is_sponsored && (
+        <p class="sponsored-note">This content is sponsored.</p>
+      )}
+
+    </div>{/* /moment-article__inner */}
+  </article>
+
+  {/* ── Related stories ── */}
+  {relatedStories.length > 0 && (
+    <section class="related-section">
+      <div class="container-site">
+        <h2 class="related-section__heading reveal">Stories from this moment</h2>
+        <div class="related-section__grid stagger-children">
+          {relatedStories.map((s) => (
+            <StoryCard
+              slug={s.id}
+              title={s.data.title}
+              excerpt={s.data.excerpt}
+              readTime={s.data.read_time}
+              imageSrc={s.data.cover_image?.src}
+              imageAlt={s.data.cover_image?.alt}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+</Base>
+
+<style>
+  /* Hero image */
+  .moment-hero-img {
+    position: relative;
+    height: clamp(280px, 45vh, 480px);
+    overflow: hidden;
+  }
+  .moment-hero-img__img { width: 100%; height: 100%; object-fit: cover; }
+  .moment-hero-img__scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, var(--c-bg) 100%);
+  }
+  .moment-hero-plain {
+    height: 4rem;
+    background: var(--c-bg-alt);
+  }
+
+  /* Article layout */
+  .moment-article { padding-block: 2rem 5rem; }
+  .moment-article__inner {
+    max-width: 760px;
+    margin: 0 auto;
+    padding-inline: clamp(1.25rem, 5vw, 2.5rem);
+  }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--c-text-faint);
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--c-text-faint); text-decoration: none; transition: color 0.2s; }
+  .breadcrumb a:hover { color: var(--c-text); }
+
+  /* Meta row */
+  .meta-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+  .meta-icon { font-size: 1.75rem; line-height: 1; }
+
+  /* Title */
+  .moment-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--c-text);
+    margin-bottom: 1rem;
+  }
+
+  /* Lead */
+  .moment-lead {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+    line-height: 1.6;
+    color: var(--c-text-muted);
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  /* LLM Summary block — visually useful AND machine-readable */
+  .llm-summary-block {
+    background: var(--c-bg-alt);
+    border-left: 3px solid var(--c-accent);
+    border-radius: 0 0.75rem 0.75rem 0;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .llm-summary-block__eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-text-faint);
+    margin-bottom: 0.5rem;
+  }
+  .llm-summary-block__text {
+    font-size: 0.975rem;
+    line-height: 1.7;
+    color: var(--c-text-soft);
+    margin: 0;
+  }
+
+  /* Emotion frame */
+  .emotion-frame {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+  @media (min-width: 600px) {
+    .emotion-frame { grid-template-columns: 1fr 1fr; }
+  }
+  .emotion-frame__item {
+    background: var(--c-bg-deep);
+    border: 1px solid var(--c-border);
+    border-radius: 1rem;
+    padding: 1.25rem;
+  }
+  .emotion-frame__label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-text-faint);
+    margin-bottom: 0.5rem;
+  }
+  .emotion-frame__text {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--c-text-muted);
+    margin: 0;
+  }
+
+  /* AI role block */
+  .ai-role-block {
+    background: var(--c-accent-light);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+  :root.dark .ai-role-block { background: rgba(212,172,130,0.12); }
+  .ai-role-block__label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-accent-deep);
+    margin-bottom: 0.5rem;
+  }
+  .ai-role-block__text {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--c-text-soft);
+    margin: 0;
+  }
+
+  /* Quick actions */
+  .actions-section { margin-block: 2.5rem; }
+  .actions-section__heading {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 1rem;
+  }
+
+  /* AI prompts */
+  .prompts-section {
+    background: var(--c-bg-alt);
+    border: 1px solid var(--c-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-block: 2.5rem;
+  }
+  .prompts-section__heading {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 0.25rem;
+  }
+  .prompts-section__desc {
+    font-size: 0.85rem;
+    color: var(--c-text-faint);
+    margin-bottom: 1rem;
+  }
+
+  /* Key facts */
+  .key-facts {
+    margin-block: 2.5rem;
+    padding: 1.5rem;
+    background: var(--c-bg-deep);
+    border-radius: 1rem;
+    border: 1px solid var(--c-border);
+  }
+  .key-facts__heading {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 1rem;
+  }
+  .key-facts__list {
+    list-style: none;
+    margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .key-facts__item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--c-text-soft);
+  }
+  .key-facts__dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    flex-shrink: 0;
+    margin-top: 0.5rem;
+  }
+
+  /* FAQ section */
+  .faq-section { margin-block: 2.5rem; }
+  .faq-section__heading {
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 1.25rem;
+  }
+  .faq-section__list { display: flex; flex-direction: column; gap: 1.25rem; }
+  .faq-item {
+    padding: 1.25rem 1.5rem;
+    background: white;
+    border: 1px solid var(--c-border);
+    border-radius: 1rem;
+  }
+  :root.dark .faq-item { background: var(--c-bg-alt); }
+  .faq-item__question {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 0.625rem;
+  }
+  .faq-item__answer {
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--c-text-muted);
+    margin: 0;
+  }
+
+  /* Consultant */
+  .consultant-credit {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--c-border);
+    margin-top: 2rem;
+    font-size: 0.8125rem;
+    color: var(--c-text-faint);
+  }
+  .consultant-credit__label { }
+  .consultant-credit__name { font-weight: 500; color: var(--c-text-muted); }
+
+  /* Safety note */
+  .safety-note {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: rgba(234, 218, 218, 0.4);
+    border-radius: 0.75rem;
+    border: 1px solid var(--c-blush);
+    margin-top: 2rem;
+  }
+  :root.dark .safety-note { background: rgba(120,80,80,0.15); border-color: rgba(120,80,80,0.3); }
+  .safety-note svg { flex-shrink: 0; margin-top: 1px; color: var(--c-text-muted); }
+  .safety-note p { font-size: 0.875rem; line-height: 1.65; color: var(--c-text-muted); margin: 0; }
+
+  /* Sponsored */
+  .sponsored-note {
+    font-size: 0.75rem;
+    color: var(--c-text-faint);
+    margin-top: 1rem;
+    font-style: italic;
+  }
+
+  /* Related section */
+  .related-section { padding-block: 4rem 5rem; background: var(--c-bg-alt); }
+  .related-section__heading {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 2rem;
+  }
+  .related-section__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .related-section__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .related-section__grid { grid-template-columns: repeat(3, 1fr); } }
+</style>

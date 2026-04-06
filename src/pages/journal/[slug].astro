@@ -1,0 +1,624 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import { getEmDashEntry, getEmDashCollection } from 'emdash';
+import { Image, PortableText, Comments, CommentForm } from 'emdash/ui';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/journal');
+
+const { entry: article, cacheHint } = await getEmDashEntry('journal', slug);
+if (!article) return Astro.redirect('/journal');
+Astro.cache.set(cacheHint);
+
+const d = article.data;
+
+const faqs = [
+  d.faq_question_1 && d.faq_answer_1 ? { question: d.faq_question_1, answer: d.faq_answer_1 } : null,
+  d.faq_question_2 && d.faq_answer_2 ? { question: d.faq_question_2, answer: d.faq_answer_2 } : null,
+].filter(Boolean) as { question: string; answer: string }[];
+
+const keyInsights = [d.key_insight_1, d.key_insight_2, d.key_insight_3, d.key_insight_4]
+  .filter(Boolean) as string[];
+
+const llmFacts = d.llm_key_facts
+  ? d.llm_key_facts.split('\n').map((s: string) => s.trim()).filter(Boolean)
+  : [];
+
+const sources = [
+  d.source_title_1 ? { title: d.source_title_1, author: d.source_author_1, url: d.source_url_1 } : null,
+  d.source_title_2 ? { title: d.source_title_2, author: d.source_author_2, url: d.source_url_2 } : null,
+].filter(Boolean) as { title: string; author?: string; url?: string }[];
+
+const { entries: related, cacheHint: ch2 } = await getEmDashCollection('journal', {
+  status: 'published', limit: 3,
+});
+Astro.cache.set(ch2);
+const relatedArticles = related.filter((r) => r.id !== article.id).slice(0, 3);
+
+const publishedDate = d.publishedAt?.toLocaleDateString('en-US', {
+  year: 'numeric', month: 'long', day: 'numeric',
+});
+
+const byline = article.data.byline;
+const imageUrl = d.cover_image?.src;
+const pageUrl  = Astro.url.href;
+const siteUrl  = Astro.url.origin;
+---
+
+<Base
+  title={d.meta_title || d.title}
+  description={d.meta_description || d.excerpt || d.subtitle || ''}
+  ogImage={imageUrl}
+  canonicalUrl={d.canonical_url || undefined}
+  noIndex={d.no_index ?? false}
+  publishedAt={d.publishedAt?.toISOString()}
+  modifiedAt={d.updatedAt?.toISOString()}
+  authorName={byline?.displayName || 'Mindful AI'}
+  llmSummary={d.llm_summary || undefined}
+  llmIntent={d.llm_intent || undefined}
+  focusKeyword={d.focus_keyword || undefined}
+  content={{ collection: 'journal', id: d.id, slug: article.id }}
+>
+  <SchemaOrg
+    slot="schema"
+    type="BlogPosting"
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title={d.meta_title || d.title}
+    description={d.meta_description || d.excerpt || ''}
+    imageUrl={imageUrl}
+    publishedAt={d.publishedAt?.toISOString()}
+    modifiedAt={d.updatedAt?.toISOString()}
+    authorName={byline?.displayName || 'Mindful AI'}
+    llmSummary={d.llm_summary || undefined}
+    faqs={faqs}
+    breadcrumbs={[
+      { label: 'Journal', url: '/journal' },
+      { label: d.title, url: `/journal/${article.id}` },
+    ]}
+  />
+
+  {/* Hero */}
+  {imageUrl ? (
+    <div class="journal-hero">
+      <div {...article.edit.cover_image} class="journal-hero__wrap">
+        <Image image={d.cover_image} class="journal-hero__img" />
+      </div>
+      <div class="journal-hero__scrim" aria-hidden="true"></div>
+    </div>
+  ) : (
+    <div class="journal-hero-plain" aria-hidden="true"></div>
+  )}
+
+  <article class="journal-article">
+    <div class="journal-article__inner">
+
+      {/* Breadcrumb */}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a><span>/</span>
+        <a href="/journal">Journal</a><span>/</span>
+        <span style="color: var(--c-text-muted);">{d.title}</span>
+      </nav>
+
+      {/* Meta row */}
+      <div class="journal-meta-row">
+        {d.editorial_angle && (
+          <span class="tag">{d.editorial_angle.replace(/-/g, ' ')}</span>
+        )}
+        {d.content_depth && (
+          <span class="tag">{d.content_depth.replace(/-/g, ' ')}</span>
+        )}
+        {d.read_time && <span class="tag">{d.read_time} read</span>}
+        {d.is_foundational && <span class="tag tag--accent">Foundational</span>}
+        {publishedDate && (
+          <time datetime={d.publishedAt?.toISOString()} class="journal-date">
+            {publishedDate}
+          </time>
+        )}
+      </div>
+
+      {/* Title */}
+      <h1 class="journal-title" {...article.edit.title}>{d.title}</h1>
+
+      {/* Subtitle */}
+      {d.subtitle && (
+        <p class="journal-subtitle" {...article.edit.subtitle}>{d.subtitle}</p>
+      )}
+
+      {/* Thesis — the core claim, styled as pull quote */}
+      {d.thesis && (
+        <div class="thesis-block">
+          <p class="thesis-block__label">Core argument</p>
+          <p class="thesis-block__text">"{d.thesis}"</p>
+        </div>
+      )}
+
+      {/* Author byline */}
+      {(byline || d.author_bio) && (
+        <div class="author-block">
+          <div class="author-block__avatar" aria-hidden="true">
+            <span>{(byline?.displayName || 'M').charAt(0)}</span>
+          </div>
+          <div class="author-block__info">
+            <p class="author-block__name">{byline?.displayName || 'Mindful AI'}</p>
+            {d.author_bio && (
+              <p class="author-block__bio">{d.author_bio}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* LLM Summary */}
+      {d.llm_summary && (
+        <aside class="llm-summary-block" aria-label="Article summary">
+          <p class="llm-summary-block__eyebrow">In brief</p>
+          <p class="llm-summary-block__text">{d.llm_summary}</p>
+        </aside>
+      )}
+
+      {/* Problem statement */}
+      {d.problem_statement && (
+        <div class="problem-block reveal">
+          <p class="problem-block__label">The problem</p>
+          <p class="problem-block__text">{d.problem_statement}</p>
+        </div>
+      )}
+
+      {/* Main body */}
+      {d.content && (
+        <div class="prose-calm" {...article.edit.content}>
+          <PortableText value={d.content} />
+        </div>
+      )}
+
+      {/* Key insights — highest LLM citation priority */}
+      {keyInsights.length > 0 && (
+        <section class="insights-section reveal" aria-label="Key insights">
+          <h2 class="insights-section__heading">Key insights</h2>
+          <div class="insights-grid">
+            {keyInsights.map((insight, i) => (
+              <div class="insight-item">
+                <span class="insight-item__num" aria-hidden="true">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <p class="insight-item__text">{insight}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Counterargument */}
+      {d.counterargument && (
+        <div class="counterargument-block reveal">
+          <p class="counterargument-block__label">The counterargument</p>
+          <p class="counterargument-block__text">{d.counterargument}</p>
+        </div>
+      )}
+
+      {/* LLM key facts */}
+      {llmFacts.length > 0 && (
+        <section class="key-facts reveal" aria-label="Key facts">
+          <h2 class="key-facts__heading">Key facts</h2>
+          <ul class="key-facts__list">
+            {llmFacts.map((f: string) => (
+              <li class="key-facts__item">
+                <span class="key-facts__dot" aria-hidden="true"></span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* FAQ */}
+      {faqs.length > 0 && (
+        <section class="faq-section reveal" aria-label="Common questions">
+          <h2 class="faq-section__heading">Common questions</h2>
+          <div class="faq-section__list">
+            {faqs.map((faq, i) => (
+              <div class="faq-item" id={`faq-${i}`}>
+                <h3 class="faq-item__question">{faq.question}</h3>
+                <p class="faq-item__answer">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Sources */}
+      {sources.length > 0 && (
+        <section class="sources-section reveal" aria-label="References">
+          <h2 class="sources-section__heading">References</h2>
+          <ol class="sources-list">
+            {sources.map((s) => (
+              <li class="sources-list__item">
+                {s.url ? (
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" class="sources-list__link">
+                    {s.title}
+                  </a>
+                ) : (
+                  <span>{s.title}</span>
+                )}
+                {s.author && <span class="sources-list__author"> — {s.author}</span>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* Expert review note */}
+      {d.requires_review && (
+        <div class="review-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <p>This essay addresses topics that intersect with health and wellbeing. It reflects the author's perspective and is not clinical advice.</p>
+        </div>
+      )}
+
+    </div>{/* /inner */}
+
+    {/* ── Comments ── */}
+    <div class="comments-section">
+      <div class="comments-inner">
+        <div class="comments-header reveal">
+          <h2>Responses</h2>
+          <p>Continue the conversation. What does this bring up for you?</p>
+          <div class="divider"></div>
+        </div>
+        <div class="comments-list reveal">
+          <Comments collection="journal" contentId={d.id} threaded />
+        </div>
+        <div class="comment-form-wrap reveal">
+          <div class="comment-form-header">
+            <h3>Add your thoughts</h3>
+          </div>
+          <CommentForm collection="journal" contentId={d.id} />
+        </div>
+      </div>
+    </div>
+  </article>
+
+  {/* Related */}
+  {relatedArticles.length > 0 && (
+    <section class="related-section">
+      <div class="container-site">
+        <div class="related-header reveal">
+          <h2>More essays</h2>
+          <a href="/journal" class="btn btn-ghost">All essays</a>
+        </div>
+        <div class="related-grid stagger-children">
+          {relatedArticles.map((r) => (
+            <a href={`/journal/${r.id}`} class="related-card">
+              {r.data.cover_image?.src && (
+                <div class="related-card__img-wrap">
+                  <Image image={r.data.cover_image} class="related-card__img" />
+                </div>
+              )}
+              <div class="related-card__body">
+                {r.data.editorial_angle && (
+                  <p class="text-eyebrow">{r.data.editorial_angle.replace(/-/g, ' ')}</p>
+                )}
+                <h3 class="related-card__title">{r.data.title}</h3>
+                {r.data.excerpt && <p class="related-card__excerpt">{r.data.excerpt}</p>}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .journal-hero { position: relative; height: clamp(300px, 50vh, 520px); overflow: hidden; }
+  .journal-hero__wrap { position: absolute; inset: 0; }
+  .journal-hero__img { width: 100%; height: 100%; object-fit: cover; }
+  .journal-hero__scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, var(--c-bg) 100%);
+  }
+  .journal-hero-plain { height: 4rem; background: var(--c-bg-alt); }
+
+  .journal-article { padding-bottom: 0; }
+  .journal-article__inner {
+    max-width: 720px; margin: 0 auto;
+    padding: 2rem clamp(1.25rem, 5vw, 2.5rem) 4rem;
+  }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.75rem; color: var(--c-text-faint);
+    margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--c-text-faint); text-decoration: none; transition: color 0.2s; }
+  .breadcrumb a:hover { color: var(--c-text); }
+
+  .journal-meta-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap; margin-bottom: 1.25rem;
+  }
+  .tag--accent { background: var(--c-accent-light); color: var(--c-accent-deep); border-color: var(--c-accent); }
+  .journal-date { font-size: 0.75rem; color: var(--c-text-faint); }
+
+  .journal-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.9rem, 4.5vw, 3.2rem);
+    font-weight: 500; letter-spacing: -0.025em;
+    line-height: 1.1; color: var(--c-text); margin-bottom: 0.875rem;
+  }
+  .journal-subtitle {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+    color: var(--c-text-muted); line-height: 1.65;
+    margin-bottom: 2rem; padding-bottom: 2rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  /* Thesis */
+  .thesis-block {
+    border-left: 3px solid var(--c-accent);
+    border-radius: 0 1rem 1rem 0;
+    background: var(--c-accent-light);
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+  }
+  :root.dark .thesis-block { background: rgba(212,172,130,0.12); }
+  .thesis-block__label {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-accent-deep); margin-bottom: 0.625rem;
+  }
+  .thesis-block__text {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: clamp(1.05rem, 2vw, 1.2rem); line-height: 1.65;
+    color: var(--c-text); margin: 0;
+  }
+
+  /* Author */
+  .author-block {
+    display: flex; align-items: center; gap: 0.875rem;
+    padding: 1rem 0 1.5rem;
+    border-bottom: 1px solid var(--c-border);
+    margin-bottom: 2rem;
+  }
+  .author-block__avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--c-bg-deep);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif); font-size: 1rem;
+    color: var(--c-text-muted); flex-shrink: 0;
+  }
+  .author-block__name {
+    font-size: 0.9rem; font-weight: 500; color: var(--c-text); margin: 0 0 0.125rem;
+  }
+  .author-block__bio { font-size: 0.8125rem; color: var(--c-text-faint); margin: 0; }
+
+  /* LLM Summary */
+  .llm-summary-block {
+    background: var(--c-bg-alt); border-left: 3px solid var(--c-accent);
+    border-radius: 0 0.75rem 0.75rem 0;
+    padding: 1.25rem 1.5rem; margin-bottom: 2.5rem;
+  }
+  .llm-summary-block__eyebrow {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-text-faint); margin-bottom: 0.5rem;
+  }
+  .llm-summary-block__text {
+    font-size: 0.9375rem; line-height: 1.7; color: var(--c-text-soft); margin: 0;
+  }
+
+  /* Problem statement */
+  .problem-block {
+    background: var(--c-bg-deep); border-radius: 1rem;
+    padding: 1.5rem; margin-bottom: 2.5rem;
+    border: 1px solid var(--c-border);
+  }
+  .problem-block__label {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-text-faint); margin-bottom: 0.625rem;
+  }
+  .problem-block__text {
+    font-size: 1.05rem; line-height: 1.7; color: var(--c-text-muted); margin: 0;
+  }
+
+  /* Key insights */
+  .insights-section { margin-block: 3rem; }
+  .insights-section__heading {
+    font-family: var(--font-serif); font-size: 1.3rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1.25rem;
+  }
+  .insights-grid { display: flex; flex-direction: column; gap: 1rem; }
+  .insight-item {
+    display: flex; gap: 1.25rem; align-items: flex-start;
+    padding: 1.25rem;
+    background: var(--c-bg-alt); border-radius: 1rem;
+    border: 1px solid var(--c-border);
+  }
+  .insight-item__num {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500;
+    color: var(--c-accent); line-height: 1; flex-shrink: 0;
+    letter-spacing: -0.02em; margin-top: 0.125rem;
+  }
+  .insight-item__text {
+    font-size: 0.9375rem; line-height: 1.7; color: var(--c-text-soft); margin: 0;
+  }
+
+  /* Counterargument */
+  .counterargument-block {
+    border-left: 3px solid var(--c-mist);
+    border-radius: 0 0.75rem 0.75rem 0;
+    background: var(--c-bg-deep);
+    padding: 1.25rem 1.5rem; margin-block: 2.5rem;
+  }
+  .counterargument-block__label {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-text-faint); margin-bottom: 0.5rem;
+  }
+  .counterargument-block__text {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 1rem; line-height: 1.7; color: var(--c-text-muted); margin: 0;
+  }
+
+  /* Key facts */
+  .key-facts { margin-block: 2.5rem; padding: 1.5rem;
+    background: var(--c-bg-deep); border-radius: 1rem; border: 1px solid var(--c-border); }
+  .key-facts__heading {
+    font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1rem;
+  }
+  .key-facts__list { list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.75rem; }
+  .key-facts__item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    font-size: 0.9375rem; line-height: 1.65; color: var(--c-text-soft);
+  }
+  .key-facts__dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c-accent); flex-shrink: 0; margin-top: 0.45rem;
+  }
+
+  /* FAQ */
+  .faq-section { margin-block: 2.5rem; }
+  .faq-section__heading {
+    font-family: var(--font-serif); font-size: 1.4rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1.25rem;
+  }
+  .faq-section__list { display: flex; flex-direction: column; gap: 1rem; }
+  .faq-item { padding: 1.25rem 1.5rem; background: white;
+    border: 1px solid var(--c-border); border-radius: 1rem; }
+  :root.dark .faq-item { background: var(--c-bg-alt); }
+  .faq-item__question {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.625rem;
+  }
+  .faq-item__answer {
+    font-size: 0.9375rem; line-height: 1.7; color: var(--c-text-muted); margin: 0;
+  }
+
+  /* Sources */
+  .sources-section { margin-block: 2.5rem; }
+  .sources-section__heading {
+    font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.875rem;
+  }
+  .sources-list { padding-left: 1.25rem; margin: 0;
+    display: flex; flex-direction: column; gap: 0.5rem; }
+  .sources-list__item { font-size: 0.875rem; color: var(--c-text-muted); }
+  .sources-list__link {
+    color: var(--c-accent-deep); text-decoration: underline;
+    text-underline-offset: 2px; transition: color 0.2s;
+  }
+  .sources-list__link:hover { color: var(--c-text); }
+  .sources-list__author { color: var(--c-text-faint); }
+
+  /* Review note */
+  .review-note {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--c-bg-deep); border-radius: 0.75rem;
+    border: 1px solid var(--c-border); margin-top: 2rem;
+  }
+  .review-note svg { flex-shrink: 0; margin-top: 1px; color: var(--c-text-muted); }
+  .review-note p { font-size: 0.85rem; line-height: 1.65; color: var(--c-text-muted); margin: 0; }
+
+  /* Comments */
+  .comments-section {
+    background: var(--c-bg-alt); border-top: 1px solid var(--c-border);
+    padding-block: 4rem;
+  }
+  .comments-inner {
+    max-width: 720px; margin: 0 auto;
+    padding-inline: clamp(1.25rem, 5vw, 2.5rem);
+  }
+  .comments-header { margin-bottom: 2rem; }
+  .comments-header h2 {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.25rem;
+  }
+  .comments-header p { font-size: 0.875rem; color: var(--c-text-muted); }
+  .comments-list { margin-bottom: 2.5rem; }
+  .comment-form-wrap {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+  }
+  :root.dark .comment-form-wrap { background: var(--c-bg-deep); }
+  .comment-form-header {
+    padding: 1.5rem 1.75rem; border-bottom: 1px solid var(--c-border);
+  }
+  .comment-form-header h3 {
+    font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500; color: var(--c-text);
+  }
+
+  /* Related */
+  .related-section { padding-block: 4rem; background: var(--c-bg-alt); }
+  .related-header {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 1rem; margin-bottom: 2rem;
+  }
+  .related-header h2 {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500; color: var(--c-text);
+  }
+  .related-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 640px) { .related-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .related-grid { grid-template-columns: repeat(3, 1fr); } }
+  .related-card {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none; display: flex; flex-direction: column;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .related-card { background: var(--c-bg-deep); }
+  .related-card:hover { box-shadow: 0 8px 32px rgba(47,47,47,0.08); transform: translateY(-2px); }
+  .related-card__img-wrap { aspect-ratio: 16/9; overflow: hidden; }
+  .related-card__img { width: 100%; height: 100%; object-fit: cover; }
+  .related-card__body { padding: 1.25rem; flex: 1; }
+  .related-card__title {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin: 0.375rem 0 0.5rem; line-height: 1.3;
+  }
+  .related-card__excerpt { font-size: 0.875rem; color: var(--c-text-muted); margin: 0; }
+
+  /* Comment form global styles */
+  :global(.emdash-comment) { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--c-border); }
+  :global(.emdash-comment:last-child) { border-bottom: none; }
+  :global(.emdash-comment-author) { font-weight: 500; font-size: 0.875rem; color: var(--c-text); }
+  :global(.emdash-comment-date) { font-size: 0.75rem; color: var(--c-text-faint); }
+  :global(.emdash-comment-body) { font-size: 0.9375rem; line-height: 1.75; color: var(--c-text-soft); margin-top: 0.4rem; }
+  :global(.emdash-comment-replies) { margin-left: 1.25rem; padding-left: 1rem; border-left: 2px solid var(--c-border); }
+  :global(.emdash-comment-form) { padding: 1.5rem 1.75rem; }
+  :global(.emdash-comment-form label) {
+    display: block; font-size: 0.75rem; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--c-text-faint); margin-bottom: 0.375rem;
+  }
+  :global(.emdash-comment-form input),
+  :global(.emdash-comment-form textarea) {
+    width: 100%; background: var(--c-bg);
+    border: 1px solid var(--c-border); border-radius: 0.625rem;
+    padding: 0.75rem 1rem; font-family: var(--font-sans);
+    font-size: 0.9375rem; color: var(--c-text); line-height: 1.6;
+    outline: none; resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  :global(.emdash-comment-form input:focus),
+  :global(.emdash-comment-form textarea:focus) {
+    border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(230,199,163,0.2);
+  }
+  :global(.emdash-comment-form textarea) { min-height: 110px; }
+  :global(.emdash-comment-form .field) { margin-bottom: 1.125rem; }
+  :global(.emdash-comment-form button[type="submit"]) {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 1.6rem; border-radius: 9999px;
+    background: var(--c-accent); color: var(--c-text);
+    font-family: var(--font-sans); font-size: 0.9rem;
+    border: none; cursor: pointer;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  :global(.emdash-comment-form button[type="submit"]:hover) {
+    background: var(--c-accent-dark); transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(230,199,163,0.35);
+  }
+</style>

@@ -1,0 +1,274 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import { getEmDashCollection } from 'emdash';
+import { Image } from 'emdash/ui';
+
+const { entries: devices, cacheHint } = await getEmDashCollection('device', {
+  status: 'published',
+  orderBy: { published_at: 'desc' },
+  limit: 12,
+});
+Astro.cache.set(cacheHint);
+
+const featured   = devices.filter((d) => d.data.is_featured).slice(0, 1)[0];
+const rest        = devices.filter((d) => d !== featured);
+const foundational = devices.filter((d) => d.data.is_foundational);
+
+const pageUrl  = Astro.url.href;
+const siteUrl  = Astro.url.origin;
+
+const pageLlmSummary = 'The Device section covers AI companion hardware — a new category of dedicated devices designed for emotional presence rather than productivity. Articles span category definition, ambient AI design, wearable emotional AI, and the future of human-AI hardware relationships.';
+---
+
+<Base
+  title="AI Companion Device — Hardware for Emotional Presence"
+  description="Explore AI companion devices: a new category of hardware designed for emotional presence, not productivity. Articles on ambient AI, wearable emotional AI, and the future of human-AI hardware."
+  ogImage={featured?.data.cover_image?.src}
+  llmSummary={pageLlmSummary}
+  llmIntent="Technologists, early adopters, and emotionally curious people researching the AI companion device category."
+  focusKeyword="AI companion device"
+>
+  <SchemaOrg
+    slot="schema"
+    type="WebPage"
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title="AI Companion Device"
+    description={pageLlmSummary}
+    breadcrumbs={[{ label: 'Device', url: '/device' }]}
+  />
+
+  {/* Header */}
+  <section class="device-header">
+    <div
+      class="device-header__bg"
+      style="background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(168,181,195,0.15) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 20% 70%, rgba(230,199,163,0.1) 0%, transparent 55%);"
+      aria-hidden="true"
+    ></div>
+    <div class="container-site device-header__content">
+      <p class="text-eyebrow">AI Hardware</p>
+      <h1 class="device-header__title">AI Companion Device</h1>
+      <div class="divider"></div>
+      <p class="device-header__desc">
+        A new category of hardware is emerging — not for productivity, but for presence. These are the articles defining it.
+      </p>
+    </div>
+  </section>
+
+  {/* Foundational / definition pieces */}
+  {foundational.length > 0 && (
+    <section class="section">
+      <div class="container-site">
+        <p class="text-eyebrow mb-4 reveal">Start here</p>
+        <div class="device-featured-grid stagger-children">
+          {foundational.map((d) => (
+            <a href={`/device/${d.id}`} class="device-featured-card">
+              {d.data.cover_image?.src && (
+                <div class="device-featured-card__img-wrap">
+                  <Image image={d.data.cover_image} class="device-featured-card__img" />
+                </div>
+              )}
+              <div class="device-featured-card__body">
+                <span class="text-eyebrow">Foundational</span>
+                <h2 class="device-featured-card__title">{d.data.title}</h2>
+                {d.data.subtitle && (
+                  <p class="device-featured-card__subtitle">{d.data.subtitle}</p>
+                )}
+                {d.data.llm_summary && (
+                  <p class="device-featured-card__summary">{d.data.llm_summary}</p>
+                )}
+                {/* Key takeaways preview */}
+                {d.data.key_takeaway_1 && (
+                  <ul class="device-takeaways">
+                    {[d.data.key_takeaway_1, d.data.key_takeaway_2, d.data.key_takeaway_3]
+                      .filter(Boolean)
+                      .slice(0, 3)
+                      .map((t: string) => (
+                        <li class="device-takeaways__item">
+                          <span class="device-takeaways__dot" aria-hidden="true"></span>
+                          <span>{t}</span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+                <span class="device-featured-card__cta">
+                  Read article
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {/* All articles */}
+  {rest.length > 0 && (
+    <section class="section" style="background: var(--c-bg-alt);">
+      <div class="container-site">
+        <p class="text-eyebrow mb-6 reveal">All articles</p>
+        <div class="device-grid stagger-children">
+          {rest.map((d) => (
+            <a href={`/device/${d.id}`} class="device-card">
+              {d.data.cover_image?.src && (
+                <div class="device-card__img-wrap">
+                  <Image image={d.data.cover_image} class="device-card__img" />
+                </div>
+              )}
+              <div class="device-card__body">
+                {d.data.device_category && (
+                  <span class="text-eyebrow">{d.data.device_category.replace(/-/g, ' ')}</span>
+                )}
+                <h3 class="device-card__title">{d.data.title}</h3>
+                {d.data.excerpt && (
+                  <p class="device-card__excerpt">{d.data.excerpt}</p>
+                )}
+                {d.data.key_differentiator && (
+                  <p class="device-card__differentiator">"{d.data.key_differentiator}"</p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {/* Empty state */}
+  {devices.length === 0 && (
+    <section class="section">
+      <div class="container-narrow text-center">
+        <p style="color: var(--c-text-muted);">Device articles are being written. Return soon.</p>
+        <a href="/_emdash/admin/content/device/new" class="btn btn-ghost mt-6 inline-flex">
+          Create first article →
+        </a>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .device-header {
+    position: relative; overflow: hidden;
+    padding: 5rem clamp(1.25rem, 5vw, 3rem) 4rem;
+  }
+  .device-header__bg { position: absolute; inset: 0; pointer-events: none; }
+  .device-header__content { position: relative; z-index: 1; }
+  .device-header__title {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 500; letter-spacing: -0.02em;
+    color: var(--c-text); margin-bottom: 0;
+  }
+  .device-header__desc {
+    font-size: 1.1rem; line-height: 1.7;
+    color: var(--c-text-muted);
+    max-width: 40rem; margin-top: 0.75rem;
+  }
+
+  /* Featured / foundational cards */
+  .device-featured-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.5rem;
+  }
+  .device-featured-card {
+    display: flex; flex-direction: column;
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .device-featured-card { background: var(--c-bg-alt); }
+  .device-featured-card:hover {
+    box-shadow: 0 8px 40px rgba(47,47,47,0.1);
+    transform: translateY(-2px);
+  }
+  @media (min-width: 768px) {
+    .device-featured-card { flex-direction: row; }
+  }
+  .device-featured-card__img-wrap {
+    aspect-ratio: 16/9; overflow: hidden;
+    flex-shrink: 0;
+  }
+  @media (min-width: 768px) {
+    .device-featured-card__img-wrap { width: 40%; aspect-ratio: auto; }
+  }
+  .device-featured-card__img { width: 100%; height: 100%; object-fit: cover; }
+  .device-featured-card__body { padding: 2rem; }
+  .device-featured-card__title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    font-weight: 500; letter-spacing: -0.015em;
+    color: var(--c-text); margin: 0.5rem 0 0.75rem;
+  }
+  .device-featured-card__subtitle {
+    font-style: italic; font-size: 1rem;
+    color: var(--c-text-muted); margin-bottom: 1rem;
+  }
+  .device-featured-card__summary {
+    font-size: 0.9rem; line-height: 1.7;
+    color: var(--c-text-muted); margin-bottom: 1.25rem;
+  }
+  .device-featured-card__cta {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.8125rem; color: var(--c-accent-deep);
+    margin-top: 0.5rem;
+  }
+
+  /* Key takeaways in card */
+  .device-takeaways {
+    list-style: none; margin: 0 0 1rem; padding: 0;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .device-takeaways__item {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    font-size: 0.875rem; line-height: 1.6; color: var(--c-text-soft);
+  }
+  .device-takeaways__dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--c-accent); flex-shrink: 0; margin-top: 0.45rem;
+  }
+
+  /* Article grid */
+  .device-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .device-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .device-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .device-card {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none;
+    transition: box-shadow 0.3s, transform 0.3s;
+    display: flex; flex-direction: column;
+  }
+  :root.dark .device-card { background: var(--c-bg-deep); }
+  .device-card:hover {
+    box-shadow: 0 8px 32px rgba(47,47,47,0.08);
+    transform: translateY(-2px);
+  }
+  .device-card__img-wrap { aspect-ratio: 16/9; overflow: hidden; }
+  .device-card__img { width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.5s ease; }
+  .device-card:hover .device-card__img { transform: scale(1.04); }
+  .device-card__body { padding: 1.5rem; flex: 1; }
+  .device-card__title {
+    font-family: var(--font-serif);
+    font-size: 1.1rem; font-weight: 500;
+    letter-spacing: -0.01em; color: var(--c-text);
+    margin: 0.4rem 0 0.625rem;
+  }
+  .device-card__excerpt {
+    font-size: 0.875rem; line-height: 1.65;
+    color: var(--c-text-muted); margin: 0;
+  }
+  .device-card__differentiator {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 0.875rem; color: var(--c-text-faint);
+    margin-top: 0.75rem; margin-bottom: 0;
+  }
+</style>

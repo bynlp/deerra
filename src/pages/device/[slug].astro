@@ -1,0 +1,410 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import { getEmDashEntry, getEmDashCollection } from 'emdash';
+import { Image, PortableText } from 'emdash/ui';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/device');
+
+const { entry: device, cacheHint } = await getEmDashEntry('device', slug);
+if (!device) return Astro.redirect('/device');
+Astro.cache.set(cacheHint);
+
+const d = device.data;
+
+const faqs = [
+  d.faq_question_1 && d.faq_answer_1 ? { question: d.faq_question_1, answer: d.faq_answer_1 } : null,
+  d.faq_question_2 && d.faq_answer_2 ? { question: d.faq_question_2, answer: d.faq_answer_2 } : null,
+  d.faq_question_3 && d.faq_answer_3 ? { question: d.faq_question_3, answer: d.faq_answer_3 } : null,
+].filter(Boolean) as { question: string; answer: string }[];
+
+const keyTakeaways = [d.key_takeaway_1, d.key_takeaway_2, d.key_takeaway_3, d.key_takeaway_4]
+  .filter(Boolean) as string[];
+
+const llmFacts = d.llm_key_facts
+  ? d.llm_key_facts.split('\n').map((s: string) => s.trim()).filter(Boolean)
+  : [];
+
+// Related device articles
+const { entries: related, cacheHint: ch2 } = await getEmDashCollection('device', {
+  status: 'published', limit: 3,
+});
+Astro.cache.set(ch2);
+const relatedDevices = related.filter((r) => r.id !== device.id).slice(0, 3);
+
+const imageUrl = d.cover_image?.src;
+const pageUrl  = Astro.url.href;
+const siteUrl  = Astro.url.origin;
+---
+
+<Base
+  title={d.meta_title || d.title}
+  description={d.meta_description || d.excerpt || d.subtitle || ''}
+  ogImage={imageUrl}
+  canonicalUrl={d.canonical_url || undefined}
+  noIndex={d.no_index ?? false}
+  publishedAt={d.publishedAt?.toISOString()}
+  modifiedAt={d.updatedAt?.toISOString()}
+  authorName={d.tech_reviewer || 'Mindful AI'}
+  llmSummary={d.llm_summary || undefined}
+  llmIntent={d.llm_intent || undefined}
+  focusKeyword={d.focus_keyword || undefined}
+  content={{ collection: 'device', id: d.id, slug: device.id }}
+>
+  <SchemaOrg
+    slot="schema"
+    type="Article"
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title={d.meta_title || d.title}
+    description={d.meta_description || d.excerpt || ''}
+    imageUrl={imageUrl}
+    publishedAt={d.publishedAt?.toISOString()}
+    modifiedAt={d.updatedAt?.toISOString()}
+    authorName={d.tech_reviewer || 'Mindful AI'}
+    llmSummary={d.llm_summary || undefined}
+    faqs={faqs}
+    breadcrumbs={[
+      { label: 'Device', url: '/device' },
+      { label: d.title, url: `/device/${device.id}` },
+    ]}
+  />
+
+  {/* Hero */}
+  {imageUrl ? (
+    <div class="device-hero">
+      <div {...device.edit.cover_image} class="device-hero__wrap">
+        <Image image={d.cover_image} class="device-hero__img" />
+      </div>
+      <div class="device-hero__scrim" aria-hidden="true"></div>
+    </div>
+  ) : (
+    <div class="device-hero-plain" style="background: var(--c-bg-deep);"></div>
+  )}
+
+  <article class="device-article">
+    <div class="device-article__inner">
+
+      {/* Breadcrumb */}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a><span>/</span>
+        <a href="/device">Device</a><span>/</span>
+        <span style="color: var(--c-text-muted);">{d.title}</span>
+      </nav>
+
+      {/* Category + stage tags */}
+      <div class="meta-row">
+        {d.device_category && <span class="tag">{d.device_category.replace(/-/g, ' ')}</span>}
+        {d.content_stage && <span class="tag">{d.content_stage}</span>}
+        {d.market_maturity && <span class="tag">{d.market_maturity}</span>}
+        {d.is_foundational && <span class="tag tag--accent">Foundational</span>}
+      </div>
+
+      {/* Title */}
+      <h1 class="device-title" {...device.edit.title}>{d.title}</h1>
+
+      {/* Subtitle */}
+      {d.subtitle && (
+        <p class="device-subtitle" {...device.edit.subtitle}>{d.subtitle}</p>
+      )}
+
+      {/* Key differentiator callout */}
+      {d.key_differentiator && (
+        <blockquote class="differentiator-quote">
+          <p>{d.key_differentiator}</p>
+        </blockquote>
+      )}
+
+      {/* LLM Summary */}
+      {d.llm_summary && (
+        <aside class="llm-summary-block" aria-label="Article summary">
+          <p class="llm-summary-block__eyebrow">In brief</p>
+          <p class="llm-summary-block__text">{d.llm_summary}</p>
+        </aside>
+      )}
+
+      {/* Key takeaways — highest LLM citation value */}
+      {keyTakeaways.length > 0 && (
+        <section class="takeaways-section reveal" aria-label="Key takeaways">
+          <h2 class="takeaways-section__heading">Key takeaways</h2>
+          <ul class="takeaways-list">
+            {keyTakeaways.map((t) => (
+              <li class="takeaways-list__item">
+                <span class="takeaways-list__dot" aria-hidden="true"></span>
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Main body */}
+      {d.content && (
+        <div class="prose-calm" {...device.edit.content}>
+          <PortableText value={d.content} />
+        </div>
+      )}
+
+      {/* Technology context */}
+      {(d.technology_type || d.form_factor) && (
+        <div class="tech-meta reveal">
+          {d.technology_type && (
+            <div class="tech-meta__item">
+              <p class="tech-meta__label">Technology</p>
+              <p class="tech-meta__value">{d.technology_type.replace(/,/g, ' · ')}</p>
+            </div>
+          )}
+          {d.form_factor && (
+            <div class="tech-meta__item">
+              <p class="tech-meta__label">Form factor</p>
+              <p class="tech-meta__value">{d.form_factor.replace(/,/g, ' · ')}</p>
+            </div>
+          )}
+          {d.existing_product_1 && (
+            <div class="tech-meta__item">
+              <p class="tech-meta__label">Products mentioned</p>
+              <p class="tech-meta__value">
+                {d.existing_product_1_url
+                  ? <a href={d.existing_product_1_url} target="_blank" rel="noopener">{d.existing_product_1}</a>
+                  : d.existing_product_1
+                }
+                {d.existing_product_2 && `, ${d.existing_product_2}`}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* LLM key facts */}
+      {llmFacts.length > 0 && (
+        <section class="key-facts reveal" aria-label="Key facts">
+          <h2 class="key-facts__heading">Key facts</h2>
+          <ul class="key-facts__list">
+            {llmFacts.map((f: string) => (
+              <li class="key-facts__item">
+                <span class="key-facts__dot" aria-hidden="true"></span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* FAQ */}
+      {faqs.length > 0 && (
+        <section class="faq-section reveal" aria-label="Frequently asked questions">
+          <h2 class="faq-section__heading">Common questions</h2>
+          <div class="faq-section__list">
+            {faqs.map((faq, i) => (
+              <div class="faq-item" id={`faq-${i}`}>
+                <h3 class="faq-item__question">{faq.question}</h3>
+                <p class="faq-item__answer">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Tech reviewer */}
+      {d.tech_reviewer && (
+        <div class="reviewer-credit">
+          <span class="reviewer-credit__label">Technical review:</span>
+          <span class="reviewer-credit__name">{d.tech_reviewer}</span>
+        </div>
+      )}
+
+    </div>
+  </article>
+
+  {/* Related */}
+  {relatedDevices.length > 0 && (
+    <section class="related-section">
+      <div class="container-site">
+        <h2 class="related-section__heading reveal">More on AI devices</h2>
+        <div class="related-grid stagger-children">
+          {relatedDevices.map((r) => (
+            <a href={`/device/${r.id}`} class="related-card">
+              {r.data.cover_image?.src && (
+                <div class="related-card__img-wrap">
+                  <Image image={r.data.cover_image} class="related-card__img" />
+                </div>
+              )}
+              <div class="related-card__body">
+                <h3 class="related-card__title">{r.data.title}</h3>
+                {r.data.excerpt && <p class="related-card__excerpt">{r.data.excerpt}</p>}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .device-hero { position: relative; height: clamp(280px, 45vh, 480px); overflow: hidden; }
+  .device-hero__wrap { position: absolute; inset: 0; }
+  .device-hero__img { width: 100%; height: 100%; object-fit: cover; }
+  .device-hero__scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, var(--c-bg) 100%);
+  }
+  .device-hero-plain { height: 4rem; }
+
+  .device-article { padding-block: 2rem 5rem; }
+  .device-article__inner {
+    max-width: 760px; margin: 0 auto;
+    padding-inline: clamp(1.25rem, 5vw, 2.5rem);
+  }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.75rem; color: var(--c-text-faint);
+    margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--c-text-faint); text-decoration: none; transition: color 0.2s; }
+  .breadcrumb a:hover { color: var(--c-text); }
+
+  .meta-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap; margin-bottom: 1.25rem;
+  }
+  .tag--accent {
+    background: var(--c-accent-light);
+    color: var(--c-accent-deep);
+    border-color: var(--c-accent);
+  }
+
+  .device-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    font-weight: 500; letter-spacing: -0.02em;
+    line-height: 1.1; color: var(--c-text); margin-bottom: 0.875rem;
+  }
+  .device-subtitle {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 1.2rem; color: var(--c-text-muted); line-height: 1.6;
+    margin-bottom: 2rem; padding-bottom: 2rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  .differentiator-quote {
+    border-left: 3px solid var(--c-accent);
+    border-radius: 0 1rem 1rem 0;
+    background: var(--c-accent-light);
+    padding: 1.25rem 1.75rem;
+    margin: 0 0 2rem;
+  }
+  :root.dark .differentiator-quote { background: rgba(212,172,130,0.12); }
+  .differentiator-quote p {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 1.15rem; line-height: 1.65;
+    color: var(--c-text); margin: 0;
+  }
+
+  .llm-summary-block {
+    background: var(--c-bg-alt); border-left: 3px solid var(--c-accent);
+    border-radius: 0 0.75rem 0.75rem 0;
+    padding: 1.25rem 1.5rem; margin-bottom: 2.5rem;
+  }
+  .llm-summary-block__eyebrow {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-text-faint); margin-bottom: 0.5rem;
+  }
+  .llm-summary-block__text {
+    font-size: 0.9375rem; line-height: 1.7; color: var(--c-text-soft); margin: 0;
+  }
+
+  .takeaways-section { margin-bottom: 2.5rem; }
+  .takeaways-section__heading {
+    font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1rem;
+  }
+  .takeaways-list {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .takeaways-list__item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: var(--c-bg-deep); border-radius: 0.75rem;
+    font-size: 0.9375rem; line-height: 1.65; color: var(--c-text-soft);
+  }
+  .takeaways-list__dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c-accent); flex-shrink: 0; margin-top: 0.45rem;
+  }
+
+  /* Technology meta grid */
+  .tech-meta {
+    display: grid; grid-template-columns: 1fr;
+    gap: 0.75rem; margin-block: 2.5rem;
+    padding: 1.5rem;
+    background: var(--c-bg-alt); border-radius: 1rem;
+    border: 1px solid var(--c-border);
+  }
+  @media (min-width: 560px) { .tech-meta { grid-template-columns: repeat(2, 1fr); } }
+  .tech-meta__item {}
+  .tech-meta__label {
+    font-size: 0.72rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--c-text-faint); margin-bottom: 0.25rem;
+  }
+  .tech-meta__value { font-size: 0.9rem; color: var(--c-text-muted); margin: 0; }
+  .tech-meta__value a { color: var(--c-accent-deep); text-decoration: underline; text-underline-offset: 2px; }
+
+  .key-facts { margin-block: 2.5rem; padding: 1.5rem;
+    background: var(--c-bg-deep); border-radius: 1rem; border: 1px solid var(--c-border); }
+  .key-facts__heading { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1rem; }
+  .key-facts__list { list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.75rem; }
+  .key-facts__item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    font-size: 0.9375rem; line-height: 1.65; color: var(--c-text-soft);
+  }
+  .key-facts__dot { width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c-accent); flex-shrink: 0; margin-top: 0.45rem; }
+
+  .faq-section { margin-block: 2.5rem; }
+  .faq-section__heading { font-family: var(--font-serif); font-size: 1.4rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 1.25rem; }
+  .faq-section__list { display: flex; flex-direction: column; gap: 1rem; }
+  .faq-item { padding: 1.25rem 1.5rem; background: white;
+    border: 1px solid var(--c-border); border-radius: 1rem; }
+  :root.dark .faq-item { background: var(--c-bg-alt); }
+  .faq-item__question { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.625rem; }
+  .faq-item__answer { font-size: 0.9375rem; line-height: 1.7; color: var(--c-text-muted); margin: 0; }
+
+  .reviewer-credit {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 1rem 0; border-top: 1px solid var(--c-border); margin-top: 2rem;
+    font-size: 0.8125rem; color: var(--c-text-faint);
+  }
+  .reviewer-credit__name { font-weight: 500; color: var(--c-text-muted); }
+
+  .related-section { padding-block: 4rem; background: var(--c-bg-alt); }
+  .related-section__heading {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 2rem;
+  }
+  .related-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 640px) { .related-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .related-grid { grid-template-columns: repeat(3, 1fr); } }
+  .related-card {
+    background: white; border: 1px solid var(--c-border); border-radius: 1.25rem;
+    overflow: hidden; text-decoration: none;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .related-card { background: var(--c-bg-deep); }
+  .related-card:hover { box-shadow: 0 6px 24px rgba(47,47,47,0.08); transform: translateY(-2px); }
+  .related-card__img-wrap { aspect-ratio: 16/9; overflow: hidden; }
+  .related-card__img { width: 100%; height: 100%; object-fit: cover; }
+  .related-card__body { padding: 1.25rem; }
+  .related-card__title {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.5rem;
+  }
+  .related-card__excerpt { font-size: 0.875rem; color: var(--c-text-muted); margin: 0; }
+</style>

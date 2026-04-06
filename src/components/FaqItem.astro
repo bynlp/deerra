@@ -1,0 +1,91 @@
+---
+interface Props {
+  question: string;
+  answer: string;
+  id: string;
+}
+
+const { question, answer, id } = Astro.props;
+const panelId = `faq-panel-${id}`;
+const triggerId = `faq-trigger-${id}`;
+---
+
+<div
+  class="faq-item rounded-card border overflow-hidden transition-all duration-200"
+  style="background: white; border-color: var(--c-border);"
+>
+  <button
+    id={triggerId}
+    class="faq-trigger w-full text-left p-6 md:p-7 flex items-start justify-between gap-4 group"
+    aria-expanded="false"
+    aria-controls={panelId}
+  >
+    <span
+      class="font-serif font-medium text-lg leading-snug group-hover:text-[var(--c-text)] transition-colors"
+      style="color: var(--c-text); letter-spacing: -0.01em;"
+    >
+      {question}
+    </span>
+
+    {/* Plus / minus icon */}
+    <span
+      class="faq-icon flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 transition-all duration-300"
+      style="background: var(--c-bg-deep); color: var(--c-text-muted);"
+      aria-hidden="true"
+    >
+      <svg class="faq-plus" width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <svg class="faq-minus hidden" width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </span>
+  </button>
+
+  <div
+    id={panelId}
+    role="region"
+    aria-labelledby={triggerId}
+    class="faq-panel hidden"
+  >
+    <div
+      class="px-6 md:px-7 pb-6 md:pb-7"
+      style="border-top: 1px solid var(--c-border);"
+    >
+      <p
+        class="pt-5 leading-relaxed"
+        style="color: var(--c-text-muted); font-size: 1.025rem; line-height: 1.75;"
+      >
+        {answer}
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.faq-trigger').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const expanded = trigger.getAttribute('aria-expanded') === 'true';
+      const panelId = trigger.getAttribute('aria-controls')!;
+      const panel = document.getElementById(panelId)!;
+      const plus = trigger.querySelector('.faq-plus')!;
+      const minus = trigger.querySelector('.faq-minus')!;
+      const icon = trigger.querySelector('.faq-icon') as HTMLElement;
+
+      if (expanded) {
+        trigger.setAttribute('aria-expanded', 'false');
+        panel.classList.add('hidden');
+        plus.classList.remove('hidden');
+        minus.classList.add('hidden');
+        icon.style.background = 'var(--c-bg-deep)';
+      } else {
+        trigger.setAttribute('aria-expanded', 'true');
+        panel.classList.remove('hidden');
+        plus.classList.add('hidden');
+        minus.classList.remove('hidden');
+        icon.style.background = 'var(--c-accent-light)';
+        icon.style.color = 'var(--c-accent-deep)';
+      }
+    });
+  });
+</script>

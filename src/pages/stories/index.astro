@@ -1,0 +1,137 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import StoryCard from '../../components/StoryCard.astro';
+import { getEmDashCollection } from 'emdash';
+
+const cursor = Astro.url.searchParams.get('cursor') ?? undefined;
+const { entries: stories, cacheHint, nextCursor } = await getEmDashCollection('stories', {
+  status: 'published',
+  limit: 12,
+  cursor,
+  orderBy: { published_at: 'desc' },
+});
+Astro.cache.set(cacheHint);
+
+const featured = stories.find((s) => s.data.is_featured);
+const rest = stories.filter((s) => s !== featured);
+
+const pageUrl = Astro.url.href;
+const siteUrl = Astro.url.origin;
+---
+
+<Base
+  title="Stories — Real Accounts of AI Companionship"
+  description="First-person accounts of using AI for everyday emotional moments — anxiety, sleeplessness, loneliness, work stress. Real, honest, human."
+  ogImage={featured?.data.cover_image?.src}
+  llmSummary="A collection of first-person accounts from people who used AI companions during difficult emotional moments. Stories cover late-night anxiety, work overwhelm, loneliness, and the experience of skeptics who found unexpected value in AI emotional support."
+  llmIntent="People curious about AI emotional support looking for real experiences, or people experiencing difficult moments seeking relatable stories."
+  focusKeyword="real stories AI companion emotional support"
+>
+  <SchemaOrg
+    slot="schema"
+    type="WebPage"
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title="Stories"
+    description="First-person accounts of AI companionship."
+    breadcrumbs={[{ label: 'Stories', url: '/stories' }]}
+  />
+
+  <section class="stories-header">
+    <div class="stories-header__bg" aria-hidden="true"></div>
+    <div class="container-site stories-header__content">
+      <p class="text-eyebrow">First-person</p>
+      <h1>Stories</h1>
+      <div class="divider"></div>
+      <p class="stories-header__desc">
+        Real accounts from people who found themselves in a quiet conversation with AI — and what happened next.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-site">
+      {stories.length > 0 ? (
+        <>
+          {featured && (
+            <div class="stories-featured reveal">
+              <StoryCard
+                slug={featured.id}
+                title={featured.data.title}
+                excerpt={featured.data.excerpt}
+                pullQuote={featured.data.pull_quote}
+                readTime={featured.data.read_time}
+                imageSrc={featured.data.cover_image?.src}
+                imageAlt={featured.data.cover_image?.alt}
+                variant="large"
+              />
+            </div>
+          )}
+
+          {rest.length > 0 && (
+            <div class="stories-grid stagger-children">
+              {rest.map((story) => (
+                <StoryCard
+                  slug={story.id}
+                  title={story.data.title}
+                  excerpt={story.data.excerpt}
+                  pullQuote={story.data.pull_quote}
+                  readTime={story.data.read_time}
+                  imageSrc={story.data.cover_image?.src}
+                  imageAlt={story.data.cover_image?.alt}
+                />
+              ))}
+            </div>
+          )}
+
+          {nextCursor && (
+            <div class="stories-pagination">
+              <a href={`?cursor=${nextCursor}`} class="btn btn-ghost">
+                More stories
+              </a>
+            </div>
+          )}
+        </>
+      ) : (
+        <div class="stories-empty">
+          <p>Stories are being added. Come back soon.</p>
+          <a href="/moments" class="btn btn-ghost">Explore Moments instead</a>
+        </div>
+      )}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .stories-header {
+    position: relative; overflow: hidden;
+    padding: 5rem clamp(1.25rem,5vw,3rem) 4rem;
+    background: var(--c-bg-alt);
+  }
+  .stories-header__bg {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(168,181,195,0.18) 0%, transparent 60%);
+  }
+  .stories-header__content { position: relative; z-index: 1; }
+  .stories-header__desc {
+    font-size: 1.1rem; line-height: 1.7;
+    color: var(--c-text-muted); max-width: 38rem; margin-top: 0.75rem;
+  }
+
+  .stories-featured { margin-bottom: 2rem; }
+
+  .stories-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .stories-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .stories-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .stories-pagination { margin-top: 3rem; text-align: center; }
+
+  .stories-empty {
+    text-align: center; padding: 5rem 0;
+    display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
+    color: var(--c-text-muted);
+  }
+</style>

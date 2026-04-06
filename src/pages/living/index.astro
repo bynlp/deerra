@@ -1,0 +1,212 @@
+---
+import Base from '../../layouts/Base.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
+import { getEmDashCollection } from 'emdash';
+import { Image } from 'emdash/ui';
+
+const { entries: scenes, cacheHint } = await getEmDashCollection('living', {
+  status: 'published', limit: 12,
+});
+Astro.cache.set(cacheHint);
+
+const featured = scenes.filter((s) => s.data.is_featured);
+const rest     = scenes.filter((s) => !s.data.is_featured);
+
+const pageUrl = Astro.url.href;
+const siteUrl = Astro.url.origin;
+---
+
+<Base
+  title="Living with AI — Daily Habits and Routines"
+  description="Practical guides for integrating AI into your daily life — night routines, work resets, morning check-ins, AI journaling. Built around habit loops, not hype."
+  ogImage={featured[0]?.data.cover_image?.src}
+  llmSummary="A collection of practical guides for building daily AI companion habits. Content covers night wind-down routines, mid-day work resets, morning intention-setting, and AI journaling practices. Each guide includes step-by-step instructions and the psychological mechanism behind the habit."
+  llmIntent="Adults who want to integrate AI into their daily routine for emotional wellbeing, seeking practical step-by-step guides."
+  focusKeyword="AI daily habits routine emotional wellness"
+>
+  <SchemaOrg
+    slot="schema"
+    type="WebPage"
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title="Living with AI"
+    description="Practical guides for daily AI companion habits."
+    breadcrumbs={[{ label: 'Living', url: '/living' }]}
+  />
+
+  <section class="living-header">
+    <div class="living-header__bg" aria-hidden="true"></div>
+    <div class="container-site living-header__content">
+      <p class="text-eyebrow">Daily practice</p>
+      <h1>Living with AI</h1>
+      <div class="divider"></div>
+      <p class="living-header__desc">
+        Not as a productivity tool. Practical ways AI fits into the texture of your day — quietly, usefully.
+      </p>
+    </div>
+  </section>
+
+  {featured.length > 0 && (
+    <section class="section">
+      <div class="container-site">
+        <p class="text-eyebrow mb-6 reveal">Featured guides</p>
+        <div class="living-featured-grid stagger-children">
+          {featured.map((scene) => (
+            <a href={`/living/${scene.id}`} class="living-featured-card">
+              {scene.data.cover_image?.src && (
+                <div class="living-featured-card__img-wrap">
+                  <Image image={scene.data.cover_image} class="living-featured-card__img" />
+                </div>
+              )}
+              <div class="living-featured-card__body">
+                <div class="living-featured-card__meta">
+                  {scene.data.habit_difficulty && (
+                    <span class="tag">{scene.data.habit_difficulty}</span>
+                  )}
+                  {scene.data.time_commitment && (
+                    <span class="tag tag--accent">⏱ {scene.data.time_commitment}</span>
+                  )}
+                </div>
+                <h2 class="living-featured-card__title">{scene.data.title}</h2>
+                {scene.data.subtitle && (
+                  <p class="living-featured-card__subtitle">{scene.data.subtitle}</p>
+                )}
+                {scene.data.emotional_benefit && (
+                  <p class="living-featured-card__benefit">"{scene.data.emotional_benefit}"</p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {rest.length > 0 && (
+    <section class="section" style="background: var(--c-bg-alt);">
+      <div class="container-site">
+        <p class="text-eyebrow mb-6 reveal">All guides</p>
+        <div class="living-grid stagger-children">
+          {rest.map((scene) => (
+            <a href={`/living/${scene.id}`} class="living-card">
+              {scene.data.cover_image?.src && (
+                <div class="living-card__img-wrap">
+                  <Image image={scene.data.cover_image} class="living-card__img" />
+                </div>
+              )}
+              <div class="living-card__body">
+                {scene.data.time_commitment && (
+                  <span class="text-eyebrow">{scene.data.time_commitment}</span>
+                )}
+                <h3 class="living-card__title">{scene.data.title}</h3>
+                {scene.data.excerpt && (
+                  <p class="living-card__excerpt">{scene.data.excerpt}</p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {scenes.length === 0 && (
+    <section class="section">
+      <div class="container-narrow" style="text-align: center; color: var(--c-text-muted);">
+        Guides are being added. Return soon.
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .living-header {
+    position: relative; overflow: hidden;
+    padding: 5rem clamp(1.25rem,5vw,3rem) 4rem;
+    background: var(--c-bg-alt);
+  }
+  .living-header__bg {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 60% 80% at 20% 70%, rgba(175,200,184,0.18) 0%, transparent 60%);
+  }
+  .living-header__content { position: relative; z-index: 1; }
+  .living-header__desc {
+    font-size: 1.1rem; line-height: 1.7;
+    color: var(--c-text-muted); max-width: 38rem; margin-top: 0.75rem;
+  }
+
+  .tag--accent { background: var(--c-accent-light); color: var(--c-accent-deep); border-color: var(--c-accent); }
+
+  .living-featured-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.5rem;
+  }
+  .living-featured-card {
+    display: flex; flex-direction: column;
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .living-featured-card { background: var(--c-bg-alt); }
+  .living-featured-card:hover {
+    box-shadow: 0 8px 40px rgba(47,47,47,0.1);
+    transform: translateY(-2px);
+  }
+  @media (min-width: 640px) { .living-featured-card { flex-direction: row; } }
+  .living-featured-card__img-wrap {
+    aspect-ratio: 4/3; overflow: hidden; flex-shrink: 0;
+  }
+  @media (min-width: 640px) {
+    .living-featured-card__img-wrap { width: 38%; aspect-ratio: auto; }
+  }
+  .living-featured-card__img { width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.6s ease; }
+  .living-featured-card:hover .living-featured-card__img { transform: scale(1.04); }
+  .living-featured-card__body {
+    padding: 1.75rem; display: flex; flex-direction: column; justify-content: center;
+  }
+  .living-featured-card__meta {
+    display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;
+  }
+  .living-featured-card__title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+    font-weight: 500; letter-spacing: -0.015em;
+    color: var(--c-text); margin-bottom: 0.625rem; line-height: 1.25;
+  }
+  .living-featured-card__subtitle {
+    font-style: italic; font-size: 0.95rem;
+    color: var(--c-text-muted); margin-bottom: 0.875rem;
+  }
+  .living-featured-card__benefit {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 0.9rem; color: var(--c-text-faint);
+    border-left: 2px solid var(--c-accent); padding-left: 0.875rem;
+    margin: 0;
+  }
+
+  .living-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .living-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .living-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .living-card {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none; display: flex; flex-direction: column;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .living-card { background: var(--c-bg-deep); }
+  .living-card:hover { box-shadow: 0 8px 32px rgba(47,47,47,0.08); transform: translateY(-2px); }
+  .living-card__img-wrap { aspect-ratio: 16/9; overflow: hidden; }
+  .living-card__img { width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.5s ease; }
+  .living-card:hover .living-card__img { transform: scale(1.04); }
+  .living-card__body { padding: 1.375rem; flex: 1; }
+  .living-card__title {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin: 0.375rem 0 0.5rem; line-height: 1.3;
+  }
+  .living-card__excerpt { font-size: 0.875rem; line-height: 1.65; color: var(--c-text-muted); margin: 0; }
+</style>

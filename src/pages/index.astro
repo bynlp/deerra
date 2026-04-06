@@ -1,448 +1,767 @@
 ---
-import { getEmDashCollection, getEntryTerms } from "emdash";
-import { Image } from "emdash/ui";
-import Base from "../layouts/Base.astro";
-import PostCard from "../components/PostCard.astro";
-import { getReadingTime } from "../utils/reading-time";
+import Base from '../layouts/Base.astro';
+import SchemaOrg from '../components/SchemaOrg.astro';
+import StoryCard from '../components/StoryCard.astro';
+import FaqItem from '../components/FaqItem.astro';
+import { getEmDashCollection } from 'emdash';
+import { Image } from 'emdash/ui';
 
-const { entries: posts, cacheHint } = await getEmDashCollection("posts");
+const [
+  { entries: moments,  cacheHint: ch1 },
+  { entries: stories,  cacheHint: ch2 },
+  { entries: living,   cacheHint: ch3 },
+  { entries: devices,  cacheHint: ch4 },
+  { entries: journals, cacheHint: ch5 },
+  { entries: faqs,     cacheHint: ch6 },
+] = await Promise.all([
+  getEmDashCollection('moments',  { status: 'published', limit: 6 }),
+  getEmDashCollection('stories',  { status: 'published', limit: 5, orderBy: { published_at: 'desc' } }),
+  getEmDashCollection('living',   { status: 'published', limit: 3 }),
+  getEmDashCollection('device',   { status: 'published', limit: 3, orderBy: { published_at: 'desc' } }),
+  getEmDashCollection('journal',  { status: 'published', limit: 3, orderBy: { published_at: 'desc' } }),
+  getEmDashCollection('faqs',     { status: 'published', orderBy: { order: 'asc' }, limit: 5 }),
+]);
+[ch1,ch2,ch3,ch4,ch5,ch6].forEach(h => Astro.cache.set(h));
 
-Astro.cache.set(cacheHint);
+const featuredStories = stories.filter(s => s.data.is_featured).slice(0, 3);
+const displayStories = featuredStories.length >= 2 ? featuredStories : stories.slice(0, 3);
+const featuredDevices = devices.filter(d => d.data.is_foundational).slice(0,2);
+const displayDevices = featuredDevices.length ? featuredDevices : devices.slice(0, 2);
 
-const sortedPosts = posts.toSorted((a, b) => {
-	const dateA = a.data.publishedAt?.getTime() ?? 0;
-	const dateB = b.data.publishedAt?.getTime() ?? 0;
-	return dateB - dateA;
-});
-
-// Find the first post with a featured image for the hero
-const featuredPost = sortedPosts.find((p) => p.data.featured_image);
-const featuredIndex = featuredPost ? sortedPosts.indexOf(featuredPost) : -1;
-
-// Get remaining posts (exclude featured if found, limit to 6 for grid)
-const gridPosts = sortedPosts.filter((_, i) => i !== featuredIndex).slice(0, 6);
-
-// Total posts shown = featured (if any) + grid posts
-const totalShown = (featuredPost ? 1 : 0) + gridPosts.length;
-const hasMorePosts = sortedPosts.length > totalShown;
-
-// Fetch tags for featured post (bylines are already hydrated by getEmDashCollection)
-let featuredTags: Array<{ slug: string; label: string }> = [];
-const featuredBylines = featuredPost?.data.bylines ?? [];
-if (featuredPost) {
-	const tags = await getEntryTerms("posts", featuredPost.data.id, "tag");
-	featuredTags = tags.map((t) => ({ slug: t.slug, label: t.label }));
-}
-
-// Fetch tags for grid posts (bylines are already hydrated by getEmDashCollection)
-const gridPostsWithTags = await Promise.all(
-	gridPosts.map(async (post) => {
-		const tags = await getEntryTerms("posts", post.data.id, "tag");
-		const bylines = post.data.bylines ?? [];
-		return {
-			post,
-			tags: tags.map((t) => ({ slug: t.slug, label: t.label })),
-			bylines,
-		};
-	})
-);
-
-// Format date helper
-function formatDate(date: Date | null | undefined) {
-	if (!date) return null;
-	return date.toLocaleDateString("en-US", {
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-	});
-}
+const pageUrl = Astro.url.href;
+const siteUrl = Astro.url.origin;
 ---
 
-<Base title="My Blog" description="Welcome to my blog">
-	{
-		posts.length === 0 ? (
-			<section class="empty-state">
-				<h2>No posts yet</h2>
-				<p>Create your first post in the admin panel.</p>
-				<a href="/_emdash/admin/content/posts/new" class="btn">
-					Create a post
-				</a>
-			</section>
-		) : (
-			<div class="home-content">
-				{/* Featured Post - Side by side */}
-				{featuredPost && (
-					<section class="featured-section">
-						<div class="featured-grid">
-							<a href={`/posts/${featuredPost.id}`} class="featured-image-link">
-								<div class="featured-image">
-									<Image image={featuredPost.data.featured_image} />
-								</div>
-							</a>
-							<div class="featured-content">
-								<div class="featured-meta">
-									{featuredBylines.length > 0 && (
-										<>
-											<div class="featured-bylines">
-												{featuredBylines.slice(0, 2).map((credit, index) => (
-													<>
-														{index > 0 && <span class="byline-sep">,</span>}
-														<span class="featured-byline">
-															{credit.byline.avatarMediaId && (
-																<img
-																	src={`/_emdash/api/media/file/${credit.byline.avatarMediaId}`}
-																	alt={credit.byline.displayName}
-																	class="featured-byline-avatar"
-																/>
-															)}
-															<span class="featured-byline-name">
-																{credit.byline.displayName}
-															</span>
-														</span>
-													</>
-												))}
-												{featuredBylines.length > 2 && (
-													<span class="byline-more">
-														+{featuredBylines.length - 2}
-													</span>
-												)}
-											</div>
-											<span class="meta-dot" />
-										</>
-									)}
-									{formatDate(featuredPost.data.publishedAt) && (
-										<time>{formatDate(featuredPost.data.publishedAt)}</time>
-									)}
-									<span class="meta-dot" />
-									<span>
-										{getReadingTime(featuredPost.data.content)} min read
-									</span>
-								</div>
-								<a
-									href={`/posts/${featuredPost.id}`}
-									class="featured-title-link"
-								>
-									<h1 class="featured-title">{featuredPost.data.title}</h1>
-								</a>
-								{featuredPost.data.excerpt && (
-									<p class="featured-excerpt">{featuredPost.data.excerpt}</p>
-								)}
-								{featuredTags.length > 0 && (
-									<div class="featured-tags">
-										{featuredTags.map((tag) => (
-											<a href={`/tag/${tag.slug}`} class="featured-tag">
-												{tag.label}
-											</a>
-										))}
-									</div>
-								)}
-							</div>
-						</div>
-					</section>
-				)}
+<Base
+  title="Mindful AI — A Calm Space to Think, Feel, and Reset"
+  description="Explore how people use AI to navigate stress, late nights, and everyday emotions. A quiet space for your inner life."
+  llmSummary="Mindful AI is an AI emotional wellness platform providing content on AI companionship for everyday emotional moments — including late-night anxiety, work stress, loneliness, and daily habits. The site covers AI companion devices, first-person stories, living guides, and editorial thinking on the future of emotional AI."
+  llmIntent="Adults seeking AI-based emotional support, daily wellness habits, or information about the AI companion category."
+  focusKeyword="AI companion emotional wellness"
+>
+  <SchemaOrg
+    slot="schema"
+    type="WebPage"
+    url={pageUrl}
+    siteUrl={siteUrl}
+    title="Mindful AI"
+    description="A quiet space to think, feel, and reset."
+  />
 
-				{/* Latest Posts */}
-				{gridPostsWithTags.length > 0 && (
-					<section class="posts-section">
-						<header class="section-header">
-							<h2 class="section-title">Latest</h2>
-							{hasMorePosts && (
-								<a href="/posts" class="section-link">
-									View all
-								</a>
-							)}
-						</header>
-						<div class="posts-grid">
-							{gridPostsWithTags.map(({ post, tags, bylines }) => (
-								<PostCard
-									title={post.data.title ?? "Untitled"}
-									excerpt={post.data.excerpt}
-									featuredImage={post.data.featured_image}
-									href={`/posts/${post.id}`}
-									date={post.data.publishedAt ?? undefined}
-									readingTime={getReadingTime(post.data.content)}
-									tags={tags}
-									bylines={bylines}
-								/>
-							))}
-						</div>
-					</section>
-				)}
-			</div>
-		)
-	}
+  {/* ═══════ 1. HERO ═══════════════════════════════════════════════ */}
+  <section class="hero" aria-label="Hero">
+    <div class="hero__bg" aria-hidden="true">
+      <div class="hero__orb hero__orb--apricot"></div>
+      <div class="hero__orb hero__orb--mist"></div>
+      <div class="hero__orb hero__orb--blush"></div>
+    </div>
+
+    <div class="container-site hero__content">
+      <div class="hero__text">
+        <p class="text-eyebrow hero__eyebrow">AI Companionship</p>
+        <h1 class="hero__title">
+          A calm space to think,<br class="hero__br" />
+          <em class="hero__em">feel,</em> and reset.
+        </h1>
+        <p class="hero__lead">
+          Explore how people use AI to navigate stress, late nights, and everyday emotions.
+        </p>
+        <div class="hero__ctas">
+          <a href="/moments" class="btn btn-primary">
+            Explore Moments
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          <a href="/stories" class="btn btn-ghost">Read Stories</a>
+        </div>
+      </div>
+
+      <div class="hero__float-card" aria-hidden="true">
+        <div class="hero__quote-card hero__quote-card--back"></div>
+        <div class="hero__quote-card hero__quote-card--front">
+          <p class="hero__quote-text">"I wasn't looking for advice. I just needed somewhere to put all the thoughts."</p>
+          <span class="hero__quote-attr">— A late-night conversation</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero__scroll" aria-hidden="true">
+      <span>Scroll</span>
+      <div class="hero__scroll-line"></div>
+    </div>
+  </section>
+
+  {/* ═══════ 2. MOMENTS ════════════════════════════════════════════ */}
+  <section class="section" aria-label="Real-Life Moments">
+    <div class="container-site">
+      <div class="section-header reveal">
+        <div>
+          <p class="text-eyebrow">Where are you right now?</p>
+          <h2>Real-Life Moments</h2>
+          <div class="divider"></div>
+          <p class="section-header__desc">Find the feeling closest to yours. Each opens into stories and conversations that feel familiar.</p>
+        </div>
+        <a href="/moments" class="btn btn-ghost">All moments</a>
+      </div>
+
+      {moments.length > 0 ? (
+        <div class="moments-grid stagger-children">
+          {moments.map((m) => (
+            <a href={`/moments/${m.id}`} class="moment-card">
+              <div class="moment-card__inner">
+                {m.data.icon && <div class="moment-card__icon" aria-hidden="true">{m.data.icon}</div>}
+                <h3 class="moment-card__title">{m.data.title}</h3>
+                {m.data.subtitle && (
+                  <p class="moment-card__tagline">{m.data.subtitle}</p>
+                )}
+                {m.data.opening_hook && (
+                  <p class="moment-card__hook">{m.data.opening_hook}</p>
+                )}
+                <div class="moment-card__arrow" aria-hidden="true">
+                  Explore →
+                </div>
+              </div>
+              <div class="moment-card__hover-wash" aria-hidden="true"></div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="empty-state">
+          <p>Moments are being added. <a href="/_emdash/admin/content/moments/new">Create first →</a></p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  {/* ═══════ 3. FEATURED STORIES ═══════════════════════════════════ */}
+  <section class="section" style="background: var(--c-bg-alt);" aria-label="Featured Stories">
+    <div class="container-site">
+      <div class="section-header reveal">
+        <div>
+          <p class="text-eyebrow">First-person</p>
+          <h2>Featured Stories</h2>
+          <div class="divider"></div>
+        </div>
+        <a href="/stories" class="btn btn-ghost">All stories</a>
+      </div>
+
+      {displayStories.length > 0 ? (
+        <div class="stories-grid stagger-children">
+          {displayStories.map((story) => (
+            <StoryCard
+              slug={story.id}
+              title={story.data.title}
+              excerpt={story.data.excerpt}
+              pullQuote={story.data.pull_quote}
+              readTime={story.data.read_time}
+              imageSrc={story.data.cover_image?.src}
+              imageAlt={story.data.cover_image?.alt}
+            />
+          ))}
+        </div>
+      ) : (
+        <p style="color: var(--c-text-muted);">Stories coming soon.</p>
+      )}
+    </div>
+  </section>
+
+  {/* ═══════ 4. LIVING ═════════════════════════════════════════════ */}
+  <section class="section" aria-label="Living with AI">
+    <div class="container-site">
+      <div class="section-header reveal">
+        <div>
+          <p class="text-eyebrow">Daily practice</p>
+          <h2>Living with AI</h2>
+          <div class="divider"></div>
+          <p class="section-header__desc">Not as a tool. As a quiet presence that fits into the texture of your day.</p>
+        </div>
+        <a href="/living" class="btn btn-ghost">All guides</a>
+      </div>
+
+      {living.length > 0 ? (
+        <div class="living-grid stagger-children">
+          {living.map((scene) => (
+            <a href={`/living/${scene.id}`} class="living-card">
+              {scene.data.cover_image?.src && (
+                <div class="living-card__img-wrap">
+                  <Image image={scene.data.cover_image} class="living-card__img" />
+                  <div class="living-card__img-scrim" aria-hidden="true"></div>
+                </div>
+              )}
+              <div class="living-card__body">
+                <div class="living-card__meta">
+                  {scene.data.time_commitment && (
+                    <span class="tag">⏱ {scene.data.time_commitment}</span>
+                  )}
+                  {scene.data.habit_difficulty && (
+                    <span class="tag">{scene.data.habit_difficulty}</span>
+                  )}
+                </div>
+                <h3 class="living-card__title">{scene.data.title}</h3>
+                {scene.data.emotional_benefit && (
+                  <p class="living-card__benefit">"{scene.data.emotional_benefit}"</p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="living-placeholder-grid">
+          {[
+            { title: 'Night Routine', desc: 'Winding down before sleep', icon: '🌙', time: '7 min' },
+            { title: 'Work Reset',    desc: 'A pause mid-day',          icon: '☕', time: '2 min' },
+            { title: 'Morning Check-in', desc: 'Starting with intention', icon: '🌿', time: '5 min' },
+          ].map((s) => (
+            <div class="living-placeholder-card">
+              <div class="living-placeholder-card__icon" aria-hidden="true">{s.icon}</div>
+              <div>
+                <p class="tag mb-2">{s.time}</p>
+                <h3 class="living-placeholder-card__title">{s.title}</h3>
+                <p class="living-placeholder-card__desc">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+
+  {/* ═══════ 5. ABOUT AI COMPANION ═════════════════════════════════ */}
+  <section class="section companion-section" style="background: var(--c-bg-deep);" aria-label="About AI Companion">
+    <div class="container-site">
+      <div class="companion-layout">
+        <div class="companion-text reveal">
+          <p class="text-eyebrow">What is this</p>
+          <h2>An AI companion for everyday moments</h2>
+          <div class="divider"></div>
+          <p class="companion-text__body">
+            An AI companion isn't here to replace anyone.
+          </p>
+          <p class="companion-text__body">
+            It's simply a quiet space to think, reflect, and feel — whenever you need it. No appointments. No judgment. No one who needs to know.
+          </p>
+          <a href="/companion" class="btn btn-ghost">Learn more</a>
+        </div>
+
+        <div class="companion-visual reveal" aria-hidden="true">
+          <div class="companion-chat">
+            {[
+              { side: 'user', text: "I can't stop thinking about what I said earlier." },
+              { side: 'ai',   text: "What happened?" },
+              { side: 'user', text: "It wasn't even about them. I was short with someone who didn't deserve it." },
+              { side: 'ai',   text: "What was it about?" },
+            ].map((msg, i) => (
+              <div class:list={['companion-chat__row', msg.side === 'user' ? 'companion-chat__row--user' : '']}>
+                <div
+                  class:list={['companion-chat__bubble', msg.side === 'user' ? 'companion-chat__bubble--user' : 'companion-chat__bubble--ai']}
+                  style={`animation-delay: ${i * 0.18 + 0.3}s`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div class="companion-orb" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ═══════ 6. DEVICE ═════════════════════════════════════════════ */}
+  {displayDevices.length > 0 && (
+    <section class="section" aria-label="AI Companion Device">
+      <div class="container-site">
+        <div class="section-header reveal">
+          <div>
+            <p class="text-eyebrow">Hardware</p>
+            <h2>AI Companion Device</h2>
+            <div class="divider"></div>
+            <p class="section-header__desc">A new category of hardware designed for emotional presence — not productivity.</p>
+          </div>
+          <a href="/device" class="btn btn-ghost">All articles</a>
+        </div>
+
+        <div class="device-grid stagger-children">
+          {displayDevices.map((d) => (
+            <a href={`/device/${d.id}`} class="device-card">
+              {d.data.cover_image?.src && (
+                <div class="device-card__img-wrap">
+                  <Image image={d.data.cover_image} class="device-card__img" />
+                </div>
+              )}
+              <div class="device-card__body">
+                {d.data.device_category && (
+                  <p class="text-eyebrow">{d.data.device_category.replace(/-/g,' ')}</p>
+                )}
+                <h3 class="device-card__title">{d.data.title}</h3>
+                {d.data.key_differentiator && (
+                  <p class="device-card__diff">"{d.data.key_differentiator}"</p>
+                )}
+                {d.data.excerpt && (
+                  <p class="device-card__excerpt">{d.data.excerpt}</p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {/* ═══════ 7. JOURNAL ════════════════════════════════════════════ */}
+  {journals.length > 0 && (
+    <section class="section" style="background: var(--c-bg-alt);" aria-label="Journal">
+      <div class="container-site">
+        <div class="section-header reveal">
+          <div>
+            <p class="text-eyebrow">Essays</p>
+            <h2>Journal</h2>
+            <div class="divider"></div>
+          </div>
+          <a href="/journal" class="btn btn-ghost">All essays</a>
+        </div>
+
+        <div class="journal-grid stagger-children">
+          {journals.map((j) => (
+            <a href={`/journal/${j.id}`} class="journal-card">
+              {j.data.cover_image?.src && (
+                <div class="journal-card__img-wrap">
+                  <Image image={j.data.cover_image} class="journal-card__img" />
+                </div>
+              )}
+              <div class="journal-card__body">
+                {j.data.editorial_angle && (
+                  <p class="text-eyebrow">{j.data.editorial_angle.replace(/-/g,' ')}</p>
+                )}
+                <h3 class="journal-card__title">{j.data.title}</h3>
+                {j.data.thesis && (
+                  <p class="journal-card__thesis">"{j.data.thesis}"</p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {/* ═══════ 8. FAQ ════════════════════════════════════════════════ */}
+  <section class="section" aria-label="Common Questions">
+    <div class="container-site">
+      <div class="faq-layout">
+        <div class="faq-left reveal">
+          <p class="text-eyebrow">Honest answers</p>
+          <h2>Thoughts &amp; Reality</h2>
+          <div class="divider"></div>
+          <p style="color: var(--c-text-muted); font-size: 0.975rem; line-height: 1.7;">
+            The questions people actually ask — answered without evasion.
+          </p>
+          <a href="/thoughts" class="btn btn-ghost" style="margin-top: 2rem;">All thoughts</a>
+        </div>
+        <div class="faq-right reveal">
+          {faqs.length > 0 ? (
+            faqs.map((faq) => (
+              <FaqItem id={faq.id} question={faq.data.question} answer={faq.data.answer} />
+            ))
+          ) : (
+            [
+              { id: 'q1', question: 'Can AI really understand emotions?', answer: "Not in the way another person does. But it can respond thoughtfully to what you share — which is sometimes exactly what you need." },
+              { id: 'q2', question: 'Is it safe to talk to AI about personal things?', answer: "There's no one who will be surprised, worried, or changed by what you say. For many people, that creates a particular kind of freedom to be honest." },
+              { id: 'q3', question: 'Is this a replacement for therapy?', answer: "No. This is not a clinical tool. If you're experiencing serious mental health challenges, please reach out to a qualified professional." },
+            ].map((f) => (
+              <FaqItem id={f.id} question={f.question} answer={f.answer} />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ═══════ 9. FUTURE ═════════════════════════════════════════════ */}
+  <section class="future-section" aria-label="What comes next">
+    <div class="future-section__bg" aria-hidden="true"></div>
+    <div class="container-narrow future-section__content">
+      <div class="reveal">
+        <div class="future-section__beacon" aria-hidden="true"></div>
+        <p class="text-eyebrow future-section__eyebrow">What comes next</p>
+        <h2 class="future-section__title">
+          What if your companion wasn't just on your screen?
+        </h2>
+        <p class="future-section__body">
+          A new kind of presence is coming. Something that lives in the room with you — quiet, ambient, always there.
+        </p>
+        <a href="/future" class="btn future-section__cta">
+          Learn more
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
 </Base>
 
 <style>
-	.home-content {
-		max-width: var(--wide-width);
-		margin: 0 auto;
-		padding: var(--spacing-16) var(--spacing-6);
-	}
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .hero__bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 30% 50%, rgba(230,199,163,0.22) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 80% at 75% 30%, rgba(168,181,195,0.18) 0%, transparent 55%),
+                var(--c-bg);
+  }
+  .hero__orb {
+    position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none;
+    animation: float 8s ease-in-out infinite;
+  }
+  .hero__orb--apricot {
+    width: 420px; height: 420px; top: 5%; left: -8%;
+    background: rgba(230,199,163,0.35); opacity: 0.5;
+  }
+  .hero__orb--mist {
+    width: 320px; height: 320px; top: 50%; right: 5%;
+    background: rgba(168,181,195,0.25); opacity: 0.4;
+    animation-delay: -3s; animation-duration: 11s;
+  }
+  .hero__orb--blush {
+    width: 240px; height: 240px; bottom: 10%; left: 50%;
+    background: rgba(234,218,218,0.3); opacity: 0.35;
+    animation-delay: -6s; animation-duration: 14s;
+  }
 
-	/* Featured Section - Side by side */
-	.featured-section {
-		margin-bottom: var(--spacing-16);
-	}
+  .hero__content {
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: 1fr;
+    gap: 3rem; padding-block: 5rem;
+    align-items: center;
+  }
+  @media (min-width: 900px) {
+    .hero__content { grid-template-columns: 1fr 1fr; }
+  }
 
-	.featured-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--spacing-8);
-		align-items: center;
-	}
+  .hero__eyebrow { margin-bottom: 1.5rem; }
+  .hero__title {
+    font-family: var(--font-serif);
+    font-size: clamp(2.4rem, 6vw, 5rem);
+    font-weight: 500; line-height: 1.07;
+    letter-spacing: -0.025em; color: var(--c-text);
+    margin-bottom: 1.25rem;
+    animation: fadeUp 0.9s ease forwards;
+    animation-delay: 0.2s; opacity: 0;
+  }
+  .hero__br { display: none; }
+  @media (min-width: 560px) { .hero__br { display: block; } }
+  .hero__em { color: var(--c-text-soft); font-style: normal; }
+  .hero__lead {
+    font-size: 1.125rem; line-height: 1.75;
+    color: var(--c-text-muted); max-width: 36rem; margin-bottom: 2.5rem;
+    animation: fadeUp 0.9s ease forwards; animation-delay: 0.35s; opacity: 0;
+  }
+  .hero__ctas {
+    display: flex; flex-wrap: wrap; gap: 0.875rem;
+    animation: fadeUp 0.9s ease forwards; animation-delay: 0.5s; opacity: 0;
+  }
 
-	.featured-image-link {
-		grid-column: 1 / 3;
-		display: block;
-		/* Extend to viewport edge, but cap at -6rem minimum extension */
-		margin-left: min(
-			-6rem,
-			calc(-1 * (var(--spacing-6) + (100vw - var(--wide-width)) / 2))
-		);
-	}
+  /* Hero float card */
+  .hero__float-card {
+    display: none; position: relative; padding: 1rem;
+  }
+  @media (min-width: 900px) { .hero__float-card { display: block; } }
+  .hero__quote-card {
+    border-radius: 1.25rem; border: 1px solid var(--c-border);
+    padding: 1.75rem; background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+  }
+  :root.dark .hero__quote-card { background: rgba(32,30,26,0.8); }
+  .hero__quote-card--back {
+    position: absolute; top: 0; left: 0; right: 0;
+    transform: rotate(-3deg) scale(0.96); z-index: 0;
+  }
+  .hero__quote-card--front {
+    position: relative; z-index: 1;
+    animation: fadeIn 1.2s ease forwards; animation-delay: 0.8s; opacity: 0;
+  }
+  .hero__quote-text {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 1.05rem; line-height: 1.65; color: var(--c-text); margin-bottom: 0.75rem;
+  }
+  .hero__quote-attr { font-size: 0.8rem; color: var(--c-text-faint); }
 
-	.featured-image {
-		overflow: hidden;
-		border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-		background: var(--color-surface);
-	}
+  .hero__scroll {
+    position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    animation: fadeIn 1s ease forwards; animation-delay: 1.2s; opacity: 0;
+  }
+  .hero__scroll span {
+    font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--c-text-faint);
+  }
+  .hero__scroll-line {
+    width: 1px; height: 2.5rem;
+    background: linear-gradient(to bottom, var(--c-border), transparent);
+  }
 
-	.featured-image img {
-		width: 100%;
-		height: auto;
-		aspect-ratio: 4 / 3;
-		object-fit: cover;
-		transition: transform 0.4s ease;
-	}
+  /* ── Section header ── */
+  .section-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 2.5rem;
+  }
+  .section-header__desc {
+    font-size: 0.975rem; color: var(--c-text-muted);
+    max-width: 32rem; margin-top: 0.5rem;
+  }
 
-	.featured-image-link:hover .featured-image img,
-	.featured-grid:has(.featured-title-link:hover) .featured-image img {
-		transform: scale(1.02);
-	}
+  /* ── Moments grid ── */
+  .moments-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1rem;
+  }
+  @media (min-width: 480px) { .moments-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .moments-grid { grid-template-columns: repeat(3, 1fr); } }
 
-	.featured-content {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-4);
-	}
+  .moment-card {
+    position: relative; overflow: hidden;
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; text-decoration: none;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .moment-card { background: var(--c-bg-alt); }
+  .moment-card:hover {
+    box-shadow: 0 8px 40px rgba(47,47,47,0.1);
+    transform: translateY(-2px);
+  }
+  .moment-card__inner { position: relative; z-index: 1; padding: 1.75rem; }
+  .moment-card__icon { font-size: 2rem; margin-bottom: 1rem; line-height: 1; }
+  .moment-card__title {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.375rem; line-height: 1.3;
+  }
+  .moment-card__tagline {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 0.875rem; color: var(--c-text-muted); margin-bottom: 0.5rem;
+  }
+  .moment-card__hook {
+    font-size: 0.85rem; color: var(--c-text-faint); line-height: 1.6; margin-bottom: 1rem;
+  }
+  .moment-card__arrow {
+    font-size: 0.8rem; color: var(--c-accent-deep);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .moment-card:hover .moment-card__arrow { opacity: 1; }
+  .moment-card__hover-wash {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--c-accent-light) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.5s; pointer-events: none;
+  }
+  .moment-card:hover .moment-card__hover-wash { opacity: 1; }
 
-	.featured-meta {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		column-gap: var(--spacing-3);
-		row-gap: var(--spacing-1);
-		font-size: var(--font-size-sm);
-		color: var(--color-muted);
-	}
+  /* ── Stories grid ── */
+  .stories-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .stories-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .stories-grid { grid-template-columns: repeat(3, 1fr); } }
 
-	.meta-dot {
-		width: 3px;
-		height: 3px;
-		border-radius: 50%;
-		background: var(--color-muted);
-	}
+  /* ── Living grid ── */
+  .living-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .living-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .living-grid { grid-template-columns: repeat(3, 1fr); } }
 
-	/* Featured bylines */
-	.featured-bylines {
-		display: flex;
-		align-items: center;
-		gap: 2px;
-	}
+  .living-card {
+    background: var(--c-bg-alt); border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  .living-card:hover { box-shadow: 0 6px 24px rgba(47,47,47,0.08); transform: translateY(-2px); }
+  .living-card__img-wrap { aspect-ratio: 4/3; overflow: hidden; position: relative; }
+  .living-card__img { width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.6s ease; }
+  .living-card:hover .living-card__img { transform: scale(1.04); }
+  .living-card__img-scrim {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+    background: linear-gradient(to top, var(--c-bg-alt), transparent);
+  }
+  .living-card__body { padding: 1.25rem; }
+  .living-card__meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .living-card__title {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.5rem; line-height: 1.3;
+  }
+  .living-card__benefit {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 0.85rem; color: var(--c-text-faint); margin: 0;
+  }
 
-	.featured-byline {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--spacing-2);
-	}
+  .living-placeholder-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1rem;
+  }
+  @media (min-width: 640px) { .living-placeholder-grid { grid-template-columns: repeat(3, 1fr); } }
+  .living-placeholder-card {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: 1.5rem; background: var(--c-bg-alt);
+    border: 1px solid var(--c-border); border-radius: 1.25rem;
+  }
+  .living-placeholder-card__icon { font-size: 1.75rem; line-height: 1; flex-shrink: 0; }
+  .living-placeholder-card__title {
+    font-family: var(--font-serif); font-size: 1rem; font-weight: 500;
+    color: var(--c-text); margin-bottom: 0.25rem;
+  }
+  .living-placeholder-card__desc { font-size: 0.875rem; color: var(--c-text-muted); }
 
-	.featured-byline-avatar {
-		width: var(--avatar-size-md);
-		height: var(--avatar-size-md);
-		border-radius: 50%;
-		object-fit: cover;
-	}
+  /* ── Companion section ── */
+  .companion-layout {
+    display: grid; grid-template-columns: 1fr; gap: 4rem; align-items: center;
+  }
+  @media (min-width: 900px) { .companion-layout { grid-template-columns: 1fr 1fr; } }
+  .companion-text__body { color: var(--c-text-muted); line-height: 1.75; margin-bottom: 1rem; }
 
-	.featured-byline-name {
-		font-weight: 500;
-		color: var(--color-text-secondary);
-	}
+  .companion-visual { position: relative; }
+  .companion-chat {
+    background: var(--c-bg); border-radius: 1.25rem;
+    padding: 1.5rem; display: flex; flex-direction: column; gap: 0.875rem;
+    box-shadow: 0 2px 20px rgba(47,47,47,0.06);
+  }
+  .companion-chat__row { display: flex; }
+  .companion-chat__row--user { justify-content: flex-end; }
+  .companion-chat__bubble {
+    max-width: 80%; padding: 0.75rem 1.125rem;
+    font-size: 0.9375rem; line-height: 1.6;
+    border-radius: 1.25rem;
+    animation: fadeUp 0.6s ease forwards; opacity: 0;
+  }
+  .companion-chat__bubble--user {
+    background: var(--c-accent-light); color: var(--c-text);
+    border-bottom-right-radius: 0.25rem;
+  }
+  .companion-chat__bubble--ai {
+    background: white; color: var(--c-text-soft);
+    border: 1px solid var(--c-border);
+    border-bottom-left-radius: 0.25rem;
+  }
+  :root.dark .companion-chat__bubble--ai { background: var(--c-bg-alt); }
+  .companion-orb {
+    position: absolute; bottom: -2rem; right: -1rem;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: rgba(230,199,163,0.3); filter: blur(40px);
+    pointer-events: none;
+    animation: float 8s ease-in-out infinite;
+  }
 
-	.byline-sep {
-		color: var(--color-muted);
-		margin-right: 2px;
-	}
+  /* ── Device grid ── */
+  .device-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .device-grid { grid-template-columns: repeat(2, 1fr); } }
 
-	.byline-more {
-		font-size: var(--font-size-xs);
-		color: var(--color-muted);
-		margin-left: 2px;
-	}
+  .device-card {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none; display: flex; flex-direction: column;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .device-card { background: var(--c-bg-alt); }
+  .device-card:hover { box-shadow: 0 8px 32px rgba(47,47,47,0.08); transform: translateY(-2px); }
+  .device-card__img-wrap { aspect-ratio: 16/9; overflow: hidden; }
+  .device-card__img { width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.5s ease; }
+  .device-card:hover .device-card__img { transform: scale(1.04); }
+  .device-card__body { padding: 1.5rem; flex: 1; }
+  .device-card__title {
+    font-family: var(--font-serif); font-size: 1.15rem; font-weight: 500;
+    color: var(--c-text); margin: 0.4rem 0 0.625rem; line-height: 1.3;
+  }
+  .device-card__diff {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 0.9rem; color: var(--c-text-muted); margin-bottom: 0.5rem;
+  }
+  .device-card__excerpt { font-size: 0.875rem; color: var(--c-text-faint); margin: 0; }
 
-	.featured-title-link {
-		text-decoration: none;
-		color: inherit;
-	}
+  /* ── Journal grid ── */
+  .journal-grid {
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem;
+  }
+  @media (min-width: 640px) { .journal-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .journal-grid { grid-template-columns: repeat(3, 1fr); } }
 
-	.featured-title {
-		font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-4xl));
-		font-weight: 700;
-		line-height: var(--leading-tight);
-		letter-spacing: var(--tracking-tight);
-		transition: color var(--transition-fast);
-	}
+  .journal-card {
+    background: white; border: 1px solid var(--c-border);
+    border-radius: 1.25rem; overflow: hidden;
+    text-decoration: none; display: flex; flex-direction: column;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  :root.dark .journal-card { background: var(--c-bg-deep); }
+  .journal-card:hover { box-shadow: 0 8px 32px rgba(47,47,47,0.08); transform: translateY(-2px); }
+  .journal-card__img-wrap { aspect-ratio: 16/9; overflow: hidden; }
+  .journal-card__img { width: 100%; height: 100%; object-fit: cover; }
+  .journal-card__body { padding: 1.375rem; flex: 1; }
+  .journal-card__title {
+    font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500;
+    color: var(--c-text); margin: 0.4rem 0 0.5rem; line-height: 1.3;
+  }
+  .journal-card__thesis {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 0.875rem; color: var(--c-text-faint); margin: 0;
+  }
 
-	.featured-title-link:hover .featured-title,
-	.featured-grid:has(.featured-image-link:hover) .featured-title {
-		color: var(--color-accent);
-	}
+  /* ── FAQ layout ── */
+  .faq-layout {
+    display: grid; grid-template-columns: 1fr; gap: 3rem;
+  }
+  @media (min-width: 800px) { .faq-layout { grid-template-columns: 2fr 3fr; } }
+  .faq-right { display: flex; flex-direction: column; gap: 1rem; }
 
-	.featured-excerpt {
-		font-size: var(--font-size-lg);
-		line-height: var(--leading-relaxed);
-		color: var(--color-text-secondary);
-	}
+  /* ── Future section ── */
+  .future-section {
+    position: relative; overflow: hidden;
+    padding-block: clamp(5rem, 10vw, 8rem);
+    background: var(--c-text);
+  }
+  .future-section__bg {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 60% 50% at 25% 60%, rgba(230,199,163,0.1) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 60% at 80% 35%, rgba(168,181,195,0.07) 0%, transparent 55%);
+  }
+  .future-section__content { position: relative; z-index: 1; text-align: center; }
+  .future-section__beacon {
+    width: 8px; height: 8px; border-radius: 50%; margin: 0 auto 3.5rem;
+    background: var(--c-accent);
+    box-shadow: 0 0 20px rgba(230,199,163,0.5);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .future-section__eyebrow { color: rgba(230,199,163,0.75); margin-bottom: 1.25rem; }
+  .future-section__title {
+    font-family: var(--font-serif); font-weight: 500;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    letter-spacing: -0.025em; line-height: 1.1;
+    color: rgba(247,245,242,0.92); margin-bottom: 1.5rem;
+  }
+  .future-section__body {
+    font-size: 1.1rem; line-height: 1.75; margin-bottom: 2.5rem;
+    color: rgba(247,245,242,0.45); max-width: 32rem; margin-inline: auto;
+  }
+  .future-section__cta {
+    background: var(--c-accent-light); color: var(--c-text);
+  }
+  .future-section__cta:hover {
+    background: var(--c-accent);
+  }
 
-	.featured-tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--spacing-2);
-		margin-top: var(--spacing-2);
-	}
+  /* empty state */
+  .empty-state { text-align: center; padding: 3rem 0; color: var(--c-text-muted); }
+  .empty-state a { color: var(--c-accent-deep); }
 
-	.featured-tag {
-		display: inline-block;
-		padding: var(--spacing-1) var(--spacing-3);
-		font-size: var(--font-size-sm);
-		color: var(--color-text-secondary);
-		background: var(--color-surface);
-		border-radius: var(--radius);
-		text-decoration: none;
-		transition:
-			color var(--transition-fast),
-			background var(--transition-fast);
-	}
-
-	.featured-tag:hover {
-		color: var(--color-text);
-		background: var(--color-border);
-	}
-
-	/* Section header */
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		margin-bottom: var(--spacing-8);
-		padding-bottom: var(--spacing-4);
-		border-bottom: 1px solid var(--color-border-subtle);
-	}
-
-	.section-title {
-		font-size: var(--font-size-sm);
-		font-weight: 500;
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-wider);
-		color: var(--color-muted);
-	}
-
-	.section-link {
-		font-size: var(--font-size-sm);
-		color: var(--color-accent);
-		text-decoration: none;
-		transition: color var(--transition-fast);
-	}
-
-	.section-link:hover {
-		color: var(--color-accent-hover);
-	}
-
-	/* Posts Grid */
-	.posts-section {
-	}
-
-	.posts-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--spacing-12) var(--spacing-8);
-	}
-
-	/* Empty State */
-	.empty-state {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: var(--spacing-3);
-		text-align: center;
-		padding: var(--spacing-20) var(--spacing-6);
-		max-width: 400px;
-		margin: 0 auto;
-	}
-
-	.empty-state h2 {
-		font-size: var(--font-size-2xl);
-		font-weight: 600;
-	}
-
-	.empty-state p {
-		color: var(--color-muted);
-	}
-
-	.btn {
-		display: inline-block;
-		margin-top: var(--spacing-4);
-		padding: var(--spacing-3) var(--spacing-6);
-		background: var(--color-accent);
-		color: var(--color-on-accent);
-		text-decoration: none;
-		border-radius: var(--radius);
-		font-size: var(--font-size-sm);
-		font-weight: 500;
-		transition: background var(--transition-fast);
-	}
-
-	.btn:hover {
-		background: var(--color-accent-hover);
-	}
-
-	/* Responsive */
-	@media (max-width: 900px) {
-		.home-content {
-			padding: var(--spacing-6) var(--spacing-4) var(--spacing-12);
-		}
-
-		.featured-image-link {
-			margin-left: 0;
-		}
-
-		.featured-grid {
-			grid-template-columns: 1fr;
-			gap: var(--spacing-6);
-		}
-
-		.featured-image {
-			border-radius: var(--radius-lg);
-		}
-
-		.featured-image img {
-			aspect-ratio: 16 / 9;
-		}
-
-		.posts-grid {
-			grid-template-columns: repeat(2, 1fr);
-			gap: var(--spacing-8) var(--spacing-6);
-		}
-	}
-
-	@media (max-width: 600px) {
-		.featured-title {
-			font-size: var(--font-size-2xl);
-		}
-
-		.posts-grid {
-			grid-template-columns: 1fr;
-			gap: var(--spacing-8);
-		}
-	}
+  /* Animations */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+  @keyframes pulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
 </style>

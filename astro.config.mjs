@@ -21,7 +21,12 @@ export default defineConfig({
 			plugins: [formsPlugin()],
 			sandboxed: [webhookNotifierPlugin()],
 			sandboxRunner: sandbox(),
-			marketplace: "https://marketplace.emdashcms.com",
+            marketplace: "https://marketplace.emdashcms.com",
+            email: async (message) => {
+                console.log("=== EMAIL ===");
+                console.log(message);
+            },
+            mcp: true,
 		}),
 	],
 	devToolbar: { enabled: false },
