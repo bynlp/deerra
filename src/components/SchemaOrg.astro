@@ -33,7 +33,7 @@ interface Props {
   type?: 'Article' | 'FAQPage' | 'HowTo' | 'WebPage' | 'BlogPosting';
   /** Current page absolute URL */
   url: string;
-  /** Site origin e.g. https://mindfulai.com */
+  /** Site origin e.g. https://Deerraai.com */
   siteUrl: string;
   /** Page/article title */
   title: string;
@@ -68,7 +68,7 @@ const {
   imageUrl,
   publishedAt,
   modifiedAt,
-  authorName = 'Mindful AI',
+  authorName = 'Deerra AI',
   llmSummary,
   faqs = [],
   steps = [],
@@ -79,7 +79,7 @@ const {
 /* ── Publisher / Organization block (reused in Article schemas) ── */
 const publisher = {
   '@type': 'Organization',
-  name: 'Mindful AI',
+  name: 'Deerra AI',
   url: siteUrl,
   logo: {
     '@type': 'ImageObject',

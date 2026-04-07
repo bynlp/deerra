@@ -42,7 +42,7 @@ interface Props {
 }
 
 const {
-  title = 'Mindful AI',
+  title = 'Deerra AI',
   description = 'A quiet space to think, feel, and reset. Explore how people use AI for everyday emotional moments.',
   ogImage,
   canonicalUrl,
@@ -61,7 +61,7 @@ const pageUrl  = Astro.url.href;
 const canonical = canonicalUrl ?? pageUrl;
 
 // Page title: if it's already the brand name keep it; else suffix it
-const siteTitle = title === 'Mindful AI' ? title : `${title} — Mindful AI`;
+const siteTitle = title === 'Deerra AI' ? title : `${title} — Deerra AI`;
 
 const pageCtx = createPublicPageContext({
   Astro,
@@ -109,7 +109,7 @@ const pageCtx = createPublicPageContext({
     {authorName && <meta name="author"   content={authorName} />}
 
     {/* ── Open Graph ── */}
-    <meta property="og:site_name"   content="Mindful AI" />
+    <meta property="og:site_name"   content="Deerra AI" />
     <meta property="og:title"       content={siteTitle} />
     <meta property="og:description" content={llmSummary ?? description} />
     <meta property="og:url"         content={canonical} />
